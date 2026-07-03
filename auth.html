@@ -3,46 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google-adsense-account" content="ca-pub-7357410271113724">
     <title>ANFKA Academy - Kirish</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .auth-container {
-            max-width: 400px;
-            margin: 100px auto;
-            padding: 2rem;
-        }
-        .auth-tabs {
-            display: flex;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid var(--border-color);
-        }
-        .auth-tab {
-            flex: 1;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            border: none;
-            background: none;
-            font-size: 1.1rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            transition: all 0.3s;
-        }
-        .auth-tab.active {
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--primary-color);
-        }
-        .auth-form {
-            display: none;
-        }
-        .auth-form.active {
-            display: block;
-        }
+        .auth-container { max-width: 450px; margin: 100px auto; padding: 2rem; }
+        .auth-tabs { display: flex; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); }
+        .auth-tab { flex: 1; padding: 1rem; text-align: center; cursor: pointer; border: none; background: none; font-size: 1.1rem; font-weight: 500; color: var(--text-secondary); transition: all 0.3s; }
+        .auth-tab.active { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); }
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+        .password-field { position: relative; }
+        .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; background: none; border: none; font-size: 1.2rem; }
     </style>
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <a href="index.html" class="navbar-brand">🎓 ANFKA Academy</a>
         <ul class="navbar-nav">
@@ -52,216 +26,211 @@
         </ul>
     </nav>
 
-    <!-- Auth Container -->
     <div class="auth-container card">
         <div class="auth-tabs">
             <button class="auth-tab active" onclick="switchTab('login')">Kirish</button>
             <button class="auth-tab" onclick="switchTab('register')">Ro'yxatdan o'tish</button>
         </div>
 
-        <!-- Xabar maydoni -->
         <div id="message"></div>
 
-        <!-- Login Formasi -->
+        <!-- Login Form -->
         <form id="login-form" class="auth-form active">
             <div class="form-group">
-                <label class="form-label">Email</label>
+                <label class="form-label">📧 Email</label>
                 <input type="email" id="login-email" class="form-control" placeholder="Email manzilingiz" required>
             </div>
-            <div class="form-group">
-                <label class="form-label">Parol</label>
+            <div class="form-group password-field">
+                <label class="form-label">🔒 Parol</label>
                 <input type="password" id="login-password" class="form-control" placeholder="Parolingiz" required>
+                <button type="button" class="toggle-password" onclick="togglePassword('login-password')">👁️</button>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                Kirish
-            </button>
+            <button type="submit" class="btn btn-primary" style="width:100%;">🔑 Kirish</button>
             <div class="text-center mt-1">
-                <a href="#" onclick="showResetPassword()" style="color: var(--primary-color);">
-                    Parolni unutdingizmi?
-                </a>
+                <a href="#" onclick="showResetPassword()" style="color: var(--primary-color);">Parolni unutdingizmi?</a>
             </div>
         </form>
 
-        <!-- Register Formasi -->
+        <!-- Register Form -->
         <form id="register-form" class="auth-form">
             <div class="form-group">
-                <label class="form-label">To'liq ism</label>
-                <input type="text" id="register-name" class="form-control" placeholder="Ismingiz va familiyangiz" required>
+                <label class="form-label">👤 To'liq ism</label>
+                <input type="text" id="register-name" class="form-control" placeholder="Ismingiz va familiyangiz" required autocomplete="name">
             </div>
             <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" id="register-email" class="form-control" placeholder="Email manzilingiz" required>
+                <label class="form-label">📧 Email</label>
+                <input type="email" id="register-email" class="form-control" placeholder="Email manzilingiz" required autocomplete="email">
             </div>
-            <div class="form-group">
-                <label class="form-label">Parol</label>
-                <input type="password" id="register-password" class="form-control" placeholder="Parol (kamida 6 ta belgi)" required>
+            <div class="form-group password-field">
+                <label class="form-label">🔒 Parol</label>
+                <input type="password" id="register-password" class="form-control" placeholder="Parol (kamida 6 ta belgi)" required minlength="6" autocomplete="new-password">
+                <button type="button" class="toggle-password" onclick="togglePassword('register-password')">👁️</button>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                Ro'yxatdan o'tish
-            </button>
+            <button type="submit" class="btn btn-primary" style="width:100%;" id="register-submit-btn">📝 Ro'yxatdan o'tish</button>
         </form>
 
-        <!-- Parolni tiklash Formasi -->
+        <!-- Reset Form -->
         <form id="reset-form" class="auth-form">
-            <h3 class="text-center mb-2">Parolni Tiklash</h3>
+            <h3 class="text-center mb-2">🔑 Parolni Tiklash</h3>
+            <p class="text-center mb-2">Email manzilingizni kiriting, tiklash havolasini yuboramiz.</p>
             <div class="form-group">
-                <label class="form-label">Email</label>
+                <label class="form-label">📧 Email</label>
                 <input type="email" id="reset-email" class="form-control" placeholder="Email manzilingiz" required>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                Tiklash havolasini yuborish
-            </button>
+            <button type="submit" class="btn btn-primary" style="width:100%;">📤 Tiklash havolasini yuborish</button>
             <div class="text-center mt-1">
-                <a href="#" onclick="switchTab('login')" style="color: var(--primary-color);">
-                    Kirish sahifasiga qaytish
-                </a>
+                <a href="#" onclick="switchTab('login')" style="color: var(--primary-color);">← Kirish sahifasiga qaytish</a>
             </div>
         </form>
     </div>
 
-    <!-- Reklama bo'limi -->
-    <div id="header-ad" class="ad-container container"></div>
-
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    
-    <!-- EmailJS -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    
-    <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7357410271113724" crossorigin="anonymous"></script>
     
-    <!-- Custom JavaScript -->
     <script src="firebase-config.js"></script>
     <script src="emailjs-config.js"></script>
     <script src="auth.js"></script>
+    <script src="database-manager.js"></script>
     <script src="ads.js"></script>
-    
+
     <script>
-        // Tab almashtirish
         function switchTab(tab) {
-            const tabs = document.querySelectorAll('.auth-tab');
-            const forms = document.querySelectorAll('.auth-form');
-            
-            tabs.forEach(t => t.classList.remove('active'));
-            forms.forEach(f => f.classList.remove('active'));
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
             
             if (tab === 'login') {
-                tabs[0].classList.add('active');
+                document.querySelectorAll('.auth-tab')[0].classList.add('active');
                 document.getElementById('login-form').classList.add('active');
-            } else if (tab === 'register') {
-                tabs[1].classList.add('active');
+            } else {
+                document.querySelectorAll('.auth-tab')[1].classList.add('active');
                 document.getElementById('register-form').classList.add('active');
             }
-            
             document.getElementById('message').innerHTML = '';
         }
-        
+
         function showResetPassword() {
-            const tabs = document.querySelectorAll('.auth-tab');
-            const forms = document.querySelectorAll('.auth-form');
-            
-            tabs.forEach(t => t.classList.remove('active'));
-            forms.forEach(f => f.classList.remove('active'));
-            
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
             document.getElementById('reset-form').classList.add('active');
         }
-        
-        function showMessage(message, type) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 5000);
+
+        function togglePassword(id) {
+            const input = document.getElementById(id);
+            input.type = input.type === 'password' ? 'text' : 'password';
         }
-        
-        // Loading ko'rsatish
-        function showLoading(button) {
-            button.disabled = true;
-            button.textContent = 'Kuting...';
+
+        function showMessage(text, type) {
+            const div = document.getElementById('message');
+            div.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
+            setTimeout(() => div.innerHTML = '', 5000);
         }
-        
-        function hideLoading(button, originalText) {
-            button.disabled = false;
-            button.textContent = originalText;
-        }
-        
-        // Login formasi
+
+        // Login
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            const email = document.getElementById('login-email').value;
+            const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
-            const button = e.target.querySelector('button');
+            const btn = e.target.querySelector('button');
+            const orig = btn.innerHTML;
             
-            showLoading(button);
+            btn.disabled = true;
+            btn.innerHTML = 'Kuting...';
             
             const result = await loginUser(email, password);
             
             if (result.success) {
                 showMessage(result.message, 'success');
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1500);
+                setTimeout(() => window.location.href = 'dashboard.html', 1500);
             } else {
                 showMessage(result.message, 'danger');
-                hideLoading(button, 'Kirish');
+                btn.disabled = false;
+                btn.innerHTML = orig;
             }
         });
-        
-        // Register formasi
+
+        // Register
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const fullName = document.getElementById('register-name').value;
-            const email = document.getElementById('register-email').value;
+            const fullName = document.getElementById('register-name').value.trim();
+            const email = document.getElementById('register-email').value.trim();
             const password = document.getElementById('register-password').value;
-            const button = e.target.querySelector('button');
+            const btn = document.getElementById('register-submit-btn');
+            const orig = btn.innerHTML;
             
+            if (!fullName || fullName.length < 2) {
+                showMessage('Iltimos, to\'liq ismingizni kiriting', 'danger');
+                return;
+            }
+            if (!email.includes('@')) {
+                showMessage('To\'g\'ri email manzil kiriting', 'danger');
+                return;
+            }
             if (password.length < 6) {
                 showMessage('Parol kamida 6 ta belgidan iborat bo\'lishi kerak', 'danger');
                 return;
             }
             
-            showLoading(button);
+            btn.disabled = true;
+            btn.innerHTML = 'Ro\'yxatdan o\'tilmoqda...';
             
-            const result = await registerUser(email, password, fullName);
+            console.log('📤 Register yuborilmoqda:', { fullName, email });
             
-            if (result.success) {
-                showMessage(result.message, 'success');
-                // Firestore-ga saqlash
-                setTimeout(() => {
-                    switchTab('login');
-                }, 2000);
-            } else {
-                showMessage(result.message, 'danger');
-                hideLoading(button, 'Ro\'yxatdan o\'tish');
+            try {
+                const result = await registerUser(email, password, fullName);
+                console.log('📥 Register natija:', result);
+                
+                if (result.success) {
+                    showMessage('✅ ' + result.message, 'success');
+                    document.getElementById('register-form').reset();
+                    setTimeout(() => {
+                        switchTab('login');
+                        document.getElementById('login-email').value = email;
+                        showMessage('Email manzilingizni tasdiqlang va tizimga kiring', 'info');
+                    }, 2000);
+                } else {
+                    showMessage('❌ ' + result.message, 'danger');
+                    btn.disabled = false;
+                    btn.innerHTML = orig;
+                }
+            } catch (error) {
+                console.error('Kutilmagan xatolik:', error);
+                showMessage('❌ Kutilmagan xatolik yuz berdi', 'danger');
+                btn.disabled = false;
+                btn.innerHTML = orig;
             }
         });
-        
-        // Parolni tiklash formasi
+
+        // Reset password
         document.getElementById('reset-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            const email = document.getElementById('reset-email').value.trim();
+            const btn = e.target.querySelector('button');
+            const orig = btn.innerHTML;
             
-            const email = document.getElementById('reset-email').value;
-            const button = e.target.querySelector('button');
-            
-            showLoading(button);
+            btn.disabled = true;
+            btn.innerHTML = 'Yuborilmoqda...';
             
             const result = await resetPassword(email);
             
             if (result.success) {
                 showMessage(result.message, 'success');
-                setTimeout(() => {
-                    switchTab('login');
-                }, 2000);
+                setTimeout(() => switchTab('login'), 2000);
             } else {
                 showMessage(result.message, 'danger');
             }
-            
-            hideLoading(button, 'Tiklash havolasini yuborish');
+            btn.disabled = false;
+            btn.innerHTML = orig;
+        });
+
+        auth.onAuthStateChanged(user => {
+            if (user && user.emailVerified) {
+                window.location.href = 'dashboard.html';
+            }
         });
     </script>
 </body>
