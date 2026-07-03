@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-adsense-account" content="ca-pub-7357410271113724">
     <title>ANFKA Academy - Kurslar</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -18,19 +19,24 @@
     </nav>
 
     <div class="container">
-        <h1 class="text-center mb-3">📚 Barcha Bepul Kurslar</h1>
+        <h1 class="text-center mb-3">📚 Barcha Bepul Darsliklar</h1>
         
         <div class="card mb-2">
-            <div class="flex gap-2 align-center">
-                <input type="text" id="search-input" class="form-control" placeholder="🔍 Kurs qidirish..." style="flex:1;">
+            <div class="flex gap-2 align-center" style="flex-wrap: wrap;">
+                <input type="text" id="search-input" class="form-control" 
+                       placeholder="🔍 Darslik qidirish..." style="flex:1; min-width: 200px;">
                 <select id="category-filter" class="form-control" style="width:200px;">
-                    <option value="">Barchasi</option>
+                    <option value="">Barcha kategoriyalar</option>
                 </select>
             </div>
         </div>
 
         <div id="header-ad" class="ad-container"></div>
-        <div class="grid" id="courses-grid"><div class="spinner"></div></div>
+
+        <!-- BARCHA DARSLIKLAR -->
+        <div class="grid" id="videos-grid">
+            <div class="spinner"></div>
+        </div>
     </div>
 
     <footer class="footer">
@@ -49,82 +55,253 @@
     <script src="ads.js"></script>
 
     <script>
-        let allCourses = [];
+        let allVideos = [];
+        let allCategories = [];
+        let currentCategory = '';
 
-        const defaultCourses = [
-            { id: 'web-dev', title: 'Web Dasturlash', desc: 'HTML, CSS va JavaScript asoslari', category: 'programming', icon: '🌐', lessons: 24, duration: '12 hafta', level: 'Boshlang\'ich' },
-            { id: 'python', title: 'Python Dasturlash', desc: 'Python asoslari', category: 'programming', icon: '🐍', lessons: 30, duration: '15 hafta', level: 'Boshlang\'ich' },
-            { id: 'graphic-design', title: 'Grafik Dizayn', desc: 'Photoshop va Illustrator', category: 'design', icon: '🎨', lessons: 18, duration: '8 hafta', level: 'O\'rta' },
-            { id: 'digital-marketing', title: 'Raqamli Marketing', desc: 'SEO, SMM strategiyalari', category: 'marketing', icon: '📈', lessons: 20, duration: '10 hafta', level: 'Boshlang\'ich' },
-            { id: 'react-js', title: 'React JS', desc: 'Frontend kutubxonasi', category: 'programming', icon: '⚛️', lessons: 28, duration: '14 hafta', level: 'O\'rta' },
-            { id: 'ui-ux', title: 'UI/UX Dizayn', desc: 'Interfeys dizayni', category: 'design', icon: '🎯', lessons: 22, duration: '11 hafta', level: 'Boshlang\'ich' }
-        ];
-
-        async function loadCourses() {
+        // Kategoriyalarni yuklash
+        async function loadCategories() {
             try {
                 const cats = await dbManager.getCategories();
+                allCategories = cats;
+                
                 const filter = document.getElementById('category-filter');
                 if (cats.length > 0) {
-                    filter.innerHTML = '<option value="">Barchasi</option>' + cats.map(c => `<option value="${c.id}">${c.icon||''} ${c.name}</option>`).join('');
+                    filter.innerHTML = '<option value="">Barcha kategoriyalar</option>' + 
+                        cats.map(c => `<option value="${c.id}">${c.icon || '📁'} ${c.name}</option>`).join('');
                 }
-                
-                allCourses = defaultCourses;
-                displayCourses(allCourses);
             } catch (e) {
-                allCourses = defaultCourses;
-                displayCourses(allCourses);
+                console.error('Kategoriyalar yuklanmadi:', e);
             }
         }
 
-        function displayCourses(courses) {
-            const container = document.getElementById('courses-grid');
-            if (courses.length === 0) {
-                container.innerHTML = '<div class="card text-center" style="grid-column:1/-1;"><p>Kurslar topilmadi</p></div>';
-                return;
+        // VIDEOLARNI YUKLASH - ASOSIY QISM
+        async function loadVideos() {
+            const container = document.getElementById('videos-grid');
+            container.innerHTML = '<div class="spinner"></div>';
+            
+            console.log('📥 Firestore\'dan videolar yuklanmoqda...');
+            
+            try {
+                // BARCHA videolarni olish
+                const snapshot = await db.collection('videos')
+                    .orderBy('order', 'asc')
+                    .get();
+                
+                console.log('📊 Jami videolar soni:', snapshot.size);
+                
+                if (snapshot.empty) {
+                    console.log('⚠️ Firestore\'da video yo\'q. Default kurslar ko\'rsatiladi.');
+                    showDefaultCourses();
+                    return;
+                }
+                
+                allVideos = [];
+                snapshot.forEach(doc => {
+                    allVideos.push({
+                        id: doc.id,
+                        ...doc.data()
+                    });
+                });
+                
+                console.log('✅ Videolar yuklandi:', allVideos.length, 'ta');
+                
+                // Videolarni kategoriyalar bo'yicha guruhlash
+                displayVideosByCategory(allVideos);
+                
+            } catch (error) {
+                console.error('❌ Videolarni yuklashda xatolik:', error);
+                showDefaultCourses();
             }
-            container.innerHTML = courses.map(c => `
-                <div class="card" style="cursor:pointer;">
-                    <div style="text-align:center;font-size:3rem;">${c.icon}</div>
+        }
+
+        // Videolarni kategoriyalar bo'yicha ko'rsatish
+        function displayVideosByCategory(videos) {
+            const container = document.getElementById('videos-grid');
+            
+            // Videolarni guruhlash
+            const groupedVideos = {};
+            
+            videos.forEach(video => {
+                const catId = video.categoryId || video.courseId || 'umumiy';
+                if (!groupedVideos[catId]) {
+                    groupedVideos[catId] = {
+                        id: catId,
+                        title: video.courseTitle || video.categoryName || 'Kurs',
+                        icon: video.courseIcon || '📚',
+                        description: video.courseDescription || video.description || '',
+                        videos: []
+                    };
+                }
+                groupedVideos[catId].videos.push(video);
+            });
+            
+            // Kurs kartochkalarini yaratish
+            const courses = Object.values(groupedVideos);
+            
+            container.innerHTML = courses.map(course => `
+                <div class="card" style="cursor: pointer;">
+                    <div style="text-align: center; font-size: 3rem;">${course.icon || '📚'}</div>
+                    <h3>${course.title}</h3>
+                    <p>${course.description?.substring(0, 100) || ''}</p>
+                    <div style="margin: 0.5rem 0;">
+                        <small>📚 ${course.videos.length} ta darslik</small>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;" 
+                            onclick="openCourseVideos('${course.id}')">
+                        🎓 Darsliklarni Ko'rish
+                    </button>
+                </div>
+            `).join('');
+            
+            // Agar faqat bitta kurs bo'lsa, to'g'ridan-to'g'ri ochish
+            if (courses.length === 1) {
+                console.log('ℹ️ Faqat bitta kurs bor. To\'g\'ridan-to\'g\'ri ochiladi.');
+            }
+        }
+
+        // Kurs videolarini ochish
+        async function openCourseVideos(courseId) {
+            console.log('🎓 Kurs ochilmoqda:', courseId);
+            
+            // Kurs ma'lumotlarini topish
+            const courseVideos = allVideos.filter(v => 
+                (v.categoryId === courseId) || 
+                (v.courseId === courseId) ||
+                (courseId === 'umumiy')
+            );
+            
+            let courseData = {
+                title: 'Darsliklar',
+                icon: '📚',
+                description: '',
+                lessonsCount: courseVideos.length
+            };
+            
+            // Agar kategoriya ma'lumoti bo'lsa
+            if (allCategories.length > 0) {
+                const category = allCategories.find(c => c.id === courseId);
+                if (category) {
+                    courseData.title = category.name || 'Darsliklar';
+                    courseData.icon = category.icon || '📚';
+                    courseData.description = category.description || '';
+                }
+            }
+            
+            // Agar video ma'lumotida kurs nomi bo'lsa
+            if (courseVideos.length > 0) {
+                const firstVideo = courseVideos[0];
+                courseData.title = firstVideo.courseTitle || firstVideo.categoryName || courseData.title;
+                courseData.icon = firstVideo.courseIcon || courseData.icon;
+                courseData.description = firstVideo.courseDescription || courseData.description;
+            }
+            
+            // Video player'ni ochish
+            if (typeof videoPlayer !== 'undefined') {
+                videoPlayer.openCourse(courseId, courseData);
+            } else {
+                alert('Video player yuklanmagan. Sahifani yangilang.');
+            }
+        }
+
+        // Default kurslar (Firebase bo'sh bo'lganda)
+        function showDefaultCourses() {
+            const container = document.getElementById('videos-grid');
+            const defaultCourses = [
+                { id: 'web-dev', title: 'Web Dasturlash', desc: 'HTML, CSS va JavaScript asoslari', icon: '🌐', lessons: 24, category: 'programming' },
+                { id: 'python', title: 'Python Dasturlash', desc: 'Python asoslari', icon: '🐍', lessons: 30, category: 'programming' },
+                { id: 'graphic-design', title: 'Grafik Dizayn', desc: 'Photoshop va Illustrator', icon: '🎨', lessons: 18, category: 'design' },
+                { id: 'digital-marketing', title: 'Raqamli Marketing', desc: 'SEO, SMM', icon: '📈', lessons: 20, category: 'marketing' },
+                { id: 'react-js', title: 'React JS', desc: 'Frontend kutubxonasi', icon: '⚛️', lessons: 28, category: 'programming' },
+                { id: 'ui-ux', title: 'UI/UX Dizayn', desc: 'Interfeys dizayni', icon: '🎯', lessons: 22, category: 'design' }
+            ];
+            
+            allVideos = []; // Default kurslar uchun video ro'yxati bo'sh
+            
+            container.innerHTML = defaultCourses.map(c => `
+                <div class="card" style="cursor: pointer;">
+                    <div style="text-align: center; font-size: 3rem;">${c.icon}</div>
                     <h3>${c.title}</h3>
                     <p>${c.desc}</p>
-                    <small>📚 ${c.lessons} ta dars | ⏱️ ${c.duration}</small>
-                    <span class="badge" style="display:inline-block;margin-top:0.5rem;">${c.level}</span>
-                    <button class="btn btn-primary mt-1" style="width:100%;" onclick="startCourse('${c.id}')">🎓 Kursni Boshlash</button>
+                    <div style="margin: 0.5rem 0;">
+                        <small>📚 ${c.lessons} ta darslik</small>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%;" 
+                            onclick="startDefaultCourse('${c.id}', '${c.title}', '${c.icon}', '${c.desc}', ${c.lessons})">
+                        🎓 Kursni Boshlash
+                    </button>
                 </div>
             `).join('');
         }
 
-        function startCourse(courseId) {
-            const course = allCourses.find(c => c.id === courseId);
-            if (course) {
-                videoPlayer.openCourse(courseId, {
-                    title: course.title,
-                    icon: course.icon,
-                    description: course.desc,
-                    lessonsCount: course.lessons
+        // Default kursni boshlash
+        function startDefaultCourse(id, title, icon, desc, lessons) {
+            if (typeof videoPlayer !== 'undefined') {
+                videoPlayer.openCourse(id, {
+                    title: title,
+                    icon: icon,
+                    description: desc,
+                    lessonsCount: lessons
                 });
             }
         }
 
+        // Qidiruv
         document.getElementById('search-input').addEventListener('input', (e) => {
             const term = e.target.value.toLowerCase();
-            const filtered = allCourses.filter(c => c.title.toLowerCase().includes(term) || c.desc.toLowerCase().includes(term));
-            displayCourses(filtered);
+            const filtered = allVideos.filter(v => 
+                (v.title && v.title.toLowerCase().includes(term)) ||
+                (v.description && v.description.toLowerCase().includes(term)) ||
+                (v.courseTitle && v.courseTitle.toLowerCase().includes(term))
+            );
+            
+            if (allVideos.length === 0) return; // Default kurslar ko'rinib turganda qidiruv ishlamasin
+            
+            const container = document.getElementById('videos-grid');
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="card text-center" style="grid-column:1/-1;"><p>📭 Hech narsa topilmadi</p></div>';
+                return;
+            }
+            displayVideosByCategory(filtered);
         });
 
+        // Kategoriya filtri
         document.getElementById('category-filter').addEventListener('change', (e) => {
-            const cat = e.target.value;
-            const filtered = cat ? allCourses.filter(c => c.category === cat) : allCourses;
-            displayCourses(filtered);
+            const catId = e.target.value;
+            currentCategory = catId;
+            
+            if (!catId) {
+                displayVideosByCategory(allVideos);
+                return;
+            }
+            
+            const filtered = allVideos.filter(v => v.categoryId === catId || v.courseId === catId);
+            const container = document.getElementById('videos-grid');
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="card text-center" style="grid-column:1/-1;"><p>📭 Bu kategoriyada darsliklar yo\'q</p></div>';
+                return;
+            }
+            displayVideosByCategory(filtered);
         });
 
+        // Auth holatini kuzatish
         auth.onAuthStateChanged(user => {
             const link = document.getElementById('auth-link');
-            if (user) { link.textContent = 'Kabinet'; link.href = 'dashboard.html'; }
-            else { link.textContent = 'Kirish'; link.href = 'auth.html'; }
+            if (user) { 
+                link.textContent = 'Kabinet'; 
+                link.href = 'dashboard.html'; 
+            } else { 
+                link.textContent = 'Kirish'; 
+                link.href = 'auth.html'; 
+            }
         });
 
-        document.addEventListener('DOMContentLoaded', loadCourses);
+        // Sahifa yuklanganda
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadCategories();
+            await loadVideos();
+        });
     </script>
 </body>
 </html>
