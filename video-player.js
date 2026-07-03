@@ -1,4 +1,4 @@
-// Video Player Manager
+// Video Player Manager - Firestore videolari bilan ishlaydi
 class VideoPlayer {
     constructor() {
         this.currentVideo = null;
@@ -10,7 +10,6 @@ class VideoPlayer {
     }
 
     createModal() {
-        // Agar modal allaqachon mavjud bo'lsa, o'chiramiz
         const existingModal = document.getElementById('video-player-modal');
         if (existingModal) existingModal.remove();
         
@@ -64,76 +63,102 @@ class VideoPlayer {
         });
     }
 
+    // Kursni ochish - Firestore'dan videolarni yuklaydi
     async openCourse(courseId, courseData) {
         this.currentCourse = { id: courseId, ...courseData };
         this.currentIndex = 0;
         this.isOpen = true;
         
         const modal = document.getElementById('video-player-modal');
-        if (modal) {
-            modal.classList.add('show');
-        }
+        if (modal) modal.classList.add('show');
         document.body.style.overflow = 'hidden';
         document.getElementById('course-title-display').textContent = courseData.title || 'Kurs';
         
         await this.loadLessons(courseId);
-        await this.loadUserProgress();
     }
 
+    // Firestore'dan darsliklarni yuklash
     async loadLessons(courseId) {
         console.log('📥 Darsliklar yuklanmoqda. Kurs ID:', courseId);
         
         try {
-            // Firestore'dan videolarni olish
-            // courseId bo'yicha qidirish
+            // SIZNING TIZIMINGIZDA: status: 'active' bo'lgan videolarni olish
+            // Avval courseId bo'yicha qidirish
             let snapshot = await db.collection('videos')
                 .where('courseId', '==', courseId)
                 .orderBy('order', 'asc')
                 .get();
-
-            console.log('📊 Topilgan videolar soni (courseId):', snapshot.size);
-
-            // Agar courseId bo'yicha topilmasa, categoryId bo'yicha qidirish
+            
+            console.log('📊 courseId bo\'yicha topilgan:', snapshot.size);
+            
+            // Agar topilmasa, category bo'yicha qidirish
             if (snapshot.empty) {
                 snapshot = await db.collection('videos')
-                    .where('categoryId', '==', courseId)
+                    .where('category', '==', courseId)
                     .orderBy('order', 'asc')
                     .get();
-                console.log('📊 Topilgan videolar soni (categoryId):', snapshot.size);
+                console.log('📊 category bo\'yicha topilgan:', snapshot.size);
             }
-
-            // Agar hali ham bo'sh bo'lsa, barcha videolarni olish
-            if (snapshot.empty) {
-                snapshot = await db.collection('videos')
-                    .orderBy('order', 'asc')
-                    .get();
-                console.log('📊 Barcha videolar soni:', snapshot.size);
-            }
-
-            if (snapshot.empty) {
-                console.log('⚠️ Hech qanday video topilmadi. Default darsliklar ko\'rsatiladi.');
-                this.videoList = this.getDefaultLessons();
-            } else {
-                this.videoList = [];
+            
+            // Barcha videolarni filtrlab olish (status: 'active')
+            this.videoList = [];
+            
+            if (!snapshot.empty) {
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    this.videoList.push({ 
-                        id: doc.id, 
-                        ...data,
-                        completed: false 
-                    });
+                    // Faqat aktiv videolarni qo'shish
+                    if (data.status === 'active' || !data.status) {
+                        this.videoList.push({ 
+                            id: doc.id, 
+                            ...data,
+                            completed: false 
+                        });
+                    }
                 });
-                console.log('✅ Videolar yuklandi:', this.videoList.length, 'ta');
+            }
+            
+            // Agar hali ham topilmasa, barcha aktiv videolarni olish
+            if (this.videoList.length === 0) {
+                const allSnapshot = await db.collection('videos')
+                    .orderBy('order', 'asc')
+                    .get();
+                
+                allSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.status === 'active' || !data.status) {
+                        // courseId yoki category bo'yicha filtr
+                        if (data.courseId === courseId || 
+                            data.category === courseId || 
+                            !courseId || courseId === 'all') {
+                            this.videoList.push({ 
+                                id: doc.id, 
+                                ...data,
+                                completed: false 
+                            });
+                        }
+                    }
+                });
+            }
+            
+            console.log('✅ Aktiv videolar:', this.videoList.length, 'ta');
+            
+            // Agar hech narsa topilmasa, default darsliklar
+            if (this.videoList.length === 0) {
+                console.log('⚠️ Videolar topilmadi. Default darsliklar ko\'rsatiladi.');
+                this.videoList = this.getDefaultLessons();
             }
             
             this.renderLessonList();
             
-            // Progressni yuklagandan keyin birinchi yoki davom etish nuqtasidan boshlash
+            // Progressni yuklash
+            await this.loadUserProgress();
+            
+            // Birinchi darslikni boshlash yoki davom ettirish
             if (this.videoList.length > 0) {
-                await this.loadUserProgress();
-                if (this.currentIndex === 0 || this.currentIndex >= this.videoList.length) {
-                    this.playLesson(0);
+                if (this.currentIndex >= this.videoList.length) {
+                    this.currentIndex = 0;
                 }
+                this.playLesson(this.currentIndex);
             }
             
         } catch (error) {
@@ -146,6 +171,7 @@ class VideoPlayer {
         }
     }
 
+    // Default darsliklar (Firebase bo'sh bo'lganda)
     getDefaultLessons() {
         return [
             { 
@@ -155,7 +181,8 @@ class VideoPlayer {
                 url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', 
                 duration: '10:30', 
                 order: 1, 
-                views: 0 
+                views: 0,
+                category: 'umumiy'
             },
             { 
                 id: 'default-2', 
@@ -164,7 +191,8 @@ class VideoPlayer {
                 url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', 
                 duration: '15:45', 
                 order: 2, 
-                views: 0 
+                views: 0,
+                category: 'umumiy'
             },
             { 
                 id: 'default-3', 
@@ -173,11 +201,13 @@ class VideoPlayer {
                 url: 'https://www.youtube.com/embed/dQw4w9WgXcQ', 
                 duration: '20:00', 
                 order: 3, 
-                views: 0 
+                views: 0,
+                category: 'umumiy'
             }
         ];
     }
 
+    // Darsliklar ro'yxatini ko'rsatish
     renderLessonList() {
         const container = document.getElementById('lessons-list');
         if (!container) return;
@@ -191,22 +221,20 @@ class VideoPlayer {
                     <div class="lesson-duration">⏱️ ${lesson.duration || 'Noma\'lum'}</div>
                 </div>
                 <div class="lesson-status ${lesson.completed ? 'completed' : ''}">
-                    ${lesson.completed ? '✓ Yakunlangan' : ''}
+                    ${lesson.completed ? '✓' : ''}
                 </div>
             </div>
         `).join('');
     }
 
+    // Darslikni o'ynatish
     playLesson(index) {
-        if (index < 0 || index >= this.videoList.length) {
-            console.log('⚠️ Noto\'g\'ri index:', index);
-            return;
-        }
+        if (index < 0 || index >= this.videoList.length) return;
         
         this.currentIndex = index;
         this.currentVideo = this.videoList[index];
         
-        console.log('▶️ O\'ynalmoqda:', this.currentVideo.title);
+        console.log('▶️ O\'ynalmoqda:', this.currentVideo.title, '| URL:', this.currentVideo.url);
         
         const container = document.getElementById('video-container');
         if (!container) return;
@@ -230,7 +258,6 @@ class VideoPlayer {
                     allowfullscreen>
                 </iframe>`;
         } else if (url) {
-            // To'g'ridan-to'g'ri video fayl
             container.innerHTML = `
                 <video controls autoplay>
                     <source src="${url}" type="video/mp4">
@@ -247,7 +274,6 @@ class VideoPlayer {
         document.getElementById('video-title-display').textContent = this.currentVideo.title || 'Darslik';
         document.getElementById('video-views').textContent = `👁️ ${this.currentVideo.views || 0} ko'rishlar`;
         
-        // Sana
         if (this.currentVideo.createdAt) {
             const date = this.currentVideo.createdAt.toDate ? 
                 this.currentVideo.createdAt.toDate() : 
@@ -271,16 +297,12 @@ class VideoPlayer {
             completedBtn.innerHTML = '☑️ Yakunlash';
         }
         
-        // Darsliklar ro'yxatini yangilash
         this.renderLessonList();
-        
-        // Ko'rishlar sonini oshirish
         this.incrementViews();
-        
-        // Progressni saqlash
         this.saveProgress();
     }
 
+    // YouTube ID'sini ajratib olish
     extractYouTubeId(url) {
         if (!url) return '';
         const patterns = [
@@ -292,21 +314,23 @@ class VideoPlayer {
             const match = url.match(pattern);
             if (match && match[1]) return match[1];
         }
-        
-        // Agar topilmasa, URL'ni to'g'ridan-to'g'ri qaytarish
         return url;
     }
 
+    // Ko'rishlar sonini oshirish
     async incrementViews() {
         if (!this.currentVideo?.id) return;
-        
-        // Default video bo'lsa o'tkazib yuborish
         if (this.currentVideo.id.startsWith('default-')) return;
         
         try {
-            await db.collection('videos').doc(this.currentVideo.id).update({
-                views: firebase.firestore.FieldValue.increment(1)
+            const videoRef = db.collection('videos').doc(this.currentVideo.id);
+            await db.runTransaction(async (transaction) => {
+                const doc = await transaction.get(videoRef);
+                if (!doc.exists) return;
+                const currentViews = doc.data().views || 0;
+                transaction.update(videoRef, { views: currentViews + 1 });
             });
+            
             this.currentVideo.views = (this.currentVideo.views || 0) + 1;
             document.getElementById('video-views').textContent = `👁️ ${this.currentVideo.views} ko'rishlar`;
         } catch (e) {
@@ -314,6 +338,7 @@ class VideoPlayer {
         }
     }
 
+    // Progressni saqlash
     async saveProgress() {
         const user = auth.currentUser;
         if (!user || !this.currentCourse) return;
@@ -335,6 +360,7 @@ class VideoPlayer {
         }
     }
 
+    // Progress bar'ni yangilash
     updateProgressBar() {
         const completed = this.videoList.filter(v => v.completed).length;
         const total = this.videoList.length;
@@ -345,6 +371,7 @@ class VideoPlayer {
         document.getElementById('course-progress-fill').style.width = `${percent}%`;
     }
 
+    // Yakunlash
     async toggleCompleted() {
         if (!this.currentVideo) return;
         
@@ -363,7 +390,6 @@ class VideoPlayer {
         this.updateProgressBar();
         await this.saveProgress();
         
-        // Firestore'da saqlash
         const user = auth.currentUser;
         if (user && this.currentCourse) {
             const completedIds = this.videoList.filter(v => v.completed).map(v => v.id);
@@ -371,40 +397,34 @@ class VideoPlayer {
                 await db.collection('users').doc(user.uid).set({
                     completedLessons: { [this.currentCourse.id]: completedIds }
                 }, { merge: true });
-            } catch (e) {
-                console.log('Yakunlangan darsliklar saqlanmadi:', e);
-            }
+            } catch (e) {}
         }
     }
 
+    // Foydalanuvchi progressini yuklash
     async loadUserProgress() {
         const user = auth.currentUser;
         if (!user || !this.currentCourse) return;
         
         try {
-            // Realtime Database'dan progress
             const snap = await rtdb.ref(`users/${user.uid}/progress/${this.currentCourse.id}`).once('value');
             const data = snap.val();
             
-            // Firestore'dan yakunlangan darsliklar
             let completedIds = [];
             try {
                 const userDoc = await db.collection('users').doc(user.uid).get();
                 if (userDoc.exists) {
-                    const userData = userDoc.data();
-                    const completedData = userData.completedLessons;
+                    const completedData = userDoc.data().completedLessons;
                     if (completedData && completedData[this.currentCourse.id]) {
                         completedIds = completedData[this.currentCourse.id];
                     }
                 }
             } catch (e) {}
             
-            // Yakunlangan darsliklarni belgilash
             this.videoList.forEach(v => {
                 v.completed = completedIds.includes(v.id);
             });
             
-            // Davom etish nuqtasi
             if (data && data.currentLesson !== undefined) {
                 this.currentIndex = data.currentLesson;
             }
@@ -412,34 +432,26 @@ class VideoPlayer {
             this.renderLessonList();
             this.updateProgressBar();
             
-            // Oxirgi ko'rilgan darslikni yuklash
-            if (this.currentIndex >= 0 && this.currentIndex < this.videoList.length) {
-                this.playLesson(this.currentIndex);
-            }
-            
         } catch (e) {
             console.log('Progress yuklanmadi:', e);
         }
     }
 
+    // Oldingi video
     previousVideo() {
-        if (this.currentIndex > 0) {
-            this.playLesson(this.currentIndex - 1);
-        }
+        if (this.currentIndex > 0) this.playLesson(this.currentIndex - 1);
     }
 
+    // Keyingi video
     nextVideo() {
-        if (this.currentIndex < this.videoList.length - 1) {
-            this.playLesson(this.currentIndex + 1);
-        }
+        if (this.currentIndex < this.videoList.length - 1) this.playLesson(this.currentIndex + 1);
     }
 
+    // Yopish
     close() {
         this.isOpen = false;
         const modal = document.getElementById('video-player-modal');
-        if (modal) {
-            modal.classList.remove('show');
-        }
+        if (modal) modal.classList.remove('show');
         document.body.style.overflow = 'auto';
         this.saveProgress();
     }
