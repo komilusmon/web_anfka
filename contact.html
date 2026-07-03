@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ANFKA Academy - Aloqa</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <nav class="navbar">
@@ -24,11 +24,11 @@
             <form id="feedback-form">
                 <div class="form-group">
                     <label class="form-label">👤 Ismingiz</label>
-                    <input type="text" id="name" class="form-control" placeholder="Ismingizni kiriting" required>
+                    <input type="text" id="name" class="form-control" placeholder="Ismingiz" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">📧 Email</label>
-                    <input type="email" id="email" class="form-control" placeholder="Email manzilingiz" required>
+                    <input type="email" id="email" class="form-control" placeholder="Email" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">📌 Mavzu</label>
@@ -41,16 +41,16 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">💬 Xabaringiz</label>
-                    <textarea id="message-text" class="form-control" rows="5" placeholder="Xabaringizni yozing..." required></textarea>
+                    <textarea id="message-text" class="form-control" rows="5" placeholder="Xabaringiz..." required></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width:100%;">📤 Yuborish</button>
+                <button type="submit" class="btn btn-primary w-full">📤 Yuborish</button>
             </form>
         </div>
 
         <div class="grid mt-3">
-            <div class="card text-center"><div style="font-size:2rem;">📧</div><h3>Email</h3><p>info@anfka-academy.uz</p></div>
-            <div class="card text-center"><div style="font-size:2rem;">📱</div><h3>Telefon</h3><p>+998 90 123 45 67</p></div>
-            <div class="card text-center"><div style="font-size:2rem;">📍</div><h3>Manzil</h3><p>Toshkent sh., O'zbekiston</p></div>
+            <div class="card text-center"><h3>📧 Email</h3><p>info@anfka-academy.uz</p></div>
+            <div class="card text-center"><h3>📱 Telefon</h3><p>+998 90 123 45 67</p></div>
+            <div class="card text-center"><h3>📍 Manzil</h3><p>Toshkent sh., O'zbekiston</p></div>
         </div>
     </div>
 
@@ -62,13 +62,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7357410271113724" crossorigin="anonymous"></script>
-    
-    <script src="firebase-config.js"></script>
-    <script src="emailjs-config.js"></script>
-    <script src="database-manager.js"></script>
-    <script src="ads.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
 
     <script>
         document.getElementById('feedback-form').addEventListener('submit', async (e) => {
@@ -78,27 +73,25 @@
             const subject = document.getElementById('subject').value;
             const messageText = document.getElementById('message-text').value.trim();
             const btn = e.target.querySelector('button');
-            const orig = btn.innerHTML;
             
             btn.disabled = true;
             btn.innerHTML = 'Yuborilmoqda...';
             
             try {
-                await sendFeedback(email, name, messageText, subject);
                 await db.collection('feedbacks').add({
                     name, email, subject, message: messageText,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     status: 'yangi'
                 });
-                
                 document.getElementById('message').innerHTML = '<div class="alert alert-success">✅ Xabaringiz yuborildi!</div>';
                 document.getElementById('feedback-form').reset();
-                setTimeout(() => document.getElementById('message').innerHTML = '', 5000);
             } catch (error) {
                 document.getElementById('message').innerHTML = '<div class="alert alert-danger">❌ Xatolik yuz berdi</div>';
             }
+            
             btn.disabled = false;
-            btn.innerHTML = orig;
+            btn.innerHTML = '📤 Yuborish';
+            setTimeout(() => document.getElementById('message').innerHTML = '', 5000);
         });
 
         auth.onAuthStateChanged(user => {
@@ -106,7 +99,7 @@
             if (user) {
                 link.textContent = 'Kabinet';
                 link.href = 'dashboard.html';
-                document.getElementById('email').value = user.email;
+                document.getElementById('email').value = user.email || '';
             } else {
                 link.textContent = 'Kirish';
                 link.href = 'auth.html';
