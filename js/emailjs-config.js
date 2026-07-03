@@ -6,11 +6,10 @@
 
 // EmailJS sozlamalari - O'Z TEMPLATE ID'LARINGIZNI KIRITING
 const EMAILJS_CONFIG = {
-    serviceId: 'service_default', // O'z xizmat ID'ingiz
+    serviceId: 'YOUR_SERVICE_ID',        // EmailJS xizmat ID'si
     templates: {
-        feedback: 'template_feedback', // O'z template ID'ingiz
-        welcome: 'template_welcome', // O'z template ID'ingiz
-        courseNotification: 'template_course' // O'z template ID'ingiz
+        feedback: 'YOUR_FEEDBACK_TEMPLATE_ID',   // Fikr-mulohaza shabloni ID'si
+        welcome: 'YOUR_WELCOME_TEMPLATE_ID'      // Xush kelibsiz shabloni ID'si
     }
 };
 
@@ -49,7 +48,7 @@ async function sendWelcomeEmail(userEmail, userName) {
             to_name: userName,
             from_name: 'ANFKA Academy',
             subject: 'ANFKA Academyga xush kelibsiz! 🎓',
-            welcome_message: 'Siz muvaffaqiyatli ro\'yxatdan o\'tdingiz. Endi barcha bepul kurslarimizdan foydalanishingiz mumkin.',
+            welcome_message: 'Siz muvaffaqiyatli ro\'yxatdan o\'tdingiz.',
             login_link: window.location.origin + '/auth.html',
             courses_link: window.location.origin + '/courses.html'
         };
@@ -67,3 +66,5 @@ async function sendWelcomeEmail(userEmail, userName) {
         return false;
     }
 }
+
+console.log('✅ EmailJS config tayyor');
