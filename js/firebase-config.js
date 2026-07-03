@@ -16,11 +16,6 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 const rtdb = firebase.database();
 
-// Firestore sozlamalari
-db.settings({
-  timestampsInSnapshots: true
-});
+db.settings({ timestampsInSnapshots: true });
 
-console.log('✅ Firebase muvaffaqiyatli ulandi');
-console.log('📦 Firestore:', 'Ulangan');
-console.log('🔄 Realtime DB:', 'Ulangan');
+console.log('✅ Firebase ulandi');
