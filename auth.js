@@ -1,326 +1,225 @@
-<!DOCTYPE html>
-<html lang="uz">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google-adsense-account" content="ca-pub-7357410271113724">
-    <title>ANFKA Academy - Kirish</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .auth-container {
-            max-width: 450px;
-            margin: 100px auto;
-            padding: 2rem;
-        }
-        .auth-tabs {
-            display: flex;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid var(--border-color);
-        }
-        .auth-tab {
-            flex: 1;
-            padding: 1rem;
-            text-align: center;
-            cursor: pointer;
-            border: none;
-            background: none;
-            font-size: 1.1rem;
-            font-weight: 500;
-            color: var(--text-secondary);
-            transition: all 0.3s;
-        }
-        .auth-tab.active {
-            color: var(--primary-color);
-            border-bottom: 2px solid var(--primary-color);
-        }
-        .auth-form {
-            display: none;
-        }
-        .auth-form.active {
-            display: block;
-        }
-        .password-field {
-            position: relative;
-        }
-        .toggle-password {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-        }
-    </style>
-</head>
-<body>
-    <!-- Navbar -->
-    <nav class="navbar">
-        <a href="index.html" class="navbar-brand">🎓 ANFKA Academy</a>
-        <ul class="navbar-nav">
-            <li><a href="index.html" class="nav-link">Asosiy</a></li>
-            <li><a href="courses.html" class="nav-link">Kurslar</a></li>
-            <li><a href="contact.html" class="nav-link">Aloqa</a></li>
-        </ul>
-    </nav>
+// Autentifikatsiya tizimi
 
-    <!-- Auth Container -->
-    <div class="auth-container card">
-        <div class="auth-tabs">
-            <button class="auth-tab active" onclick="switchTab('login')">Kirish</button>
-            <button class="auth-tab" onclick="switchTab('register')">Ro'yxatdan o'tish</button>
-        </div>
+// Ro'yxatdan o'tish
+async function registerUser(email, password, fullName) {
+    try {
+        console.log('🔄 Ro\'yxatdan o\'tish boshlandi...', { email, fullName });
+        
+        // Firebase Authentication orqali foydalanuvchi yaratish
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        console.log('✅ Foydalanuvchi yaratildi:', user.uid);
 
-        <!-- Xabar maydoni -->
-        <div id="message"></div>
+        // Firestore-ga foydalanuvchi ma'lumotlarini saqlash
+        try {
+            await db.collection('users').doc(user.uid).set({
+                fullName: fullName,
+                email: email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
+                courses: [],
+                progress: {},
+                completedLessons: {},
+                role: 'student',
+                streak: 1
+            });
+            console.log('✅ Firestore-ga saqlandi');
+        } catch (firestoreError) {
+            console.error('❌ Firestore xatolik:', firestoreError);
+            // Firestore xatoligi bo'lsa ham davom etamiz
+        }
 
-        <!-- Login Formasi -->
-        <form id="login-form" class="auth-form active">
-            <div class="form-group">
-                <label class="form-label">📧 Email</label>
-                <input type="email" id="login-email" class="form-control" 
-                       placeholder="Email manzilingiz" required>
-            </div>
-            <div class="form-group password-field">
-                <label class="form-label">🔒 Parol</label>
-                <input type="password" id="login-password" class="form-control" 
-                       placeholder="Parolingiz" required>
-                <button type="button" class="toggle-password" onclick="togglePassword('login-password')">
-                    👁️
-                </button>
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                🔑 Kirish
-            </button>
-            <div class="text-center mt-1">
-                <a href="#" onclick="showResetPassword()" style="color: var(--primary-color);">
-                    Parolni unutdingizmi?
-                </a>
-            </div>
-        </form>
+        // Realtime Database-ga ham saqlash
+        try {
+            await rtdb.ref('users/' + user.uid).set({
+                fullName: fullName,
+                email: email,
+                username: email.split('@')[0],
+                createdAt: Date.now(),
+                lastLogin: Date.now(),
+                courses: {},
+                progress: {}
+            });
+            console.log('✅ Realtime DB-ga saqlandi');
+        } catch (rtdbError) {
+            console.error('❌ Realtime DB xatolik:', rtdbError);
+        }
 
-        <!-- Register Formasi -->
-        <form id="register-form" class="auth-form">
-            <div class="form-group">
-                <label class="form-label">👤 To'liq ism</label>
-                <input type="text" id="register-name" class="form-control" 
-                       placeholder="Ismingiz va familiyangiz" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">📧 Email</label>
-                <input type="email" id="register-email" class="form-control" 
-                       placeholder="Email manzilingiz" required>
-            </div>
-            <div class="form-group password-field">
-                <label class="form-label">🔒 Parol</label>
-                <input type="password" id="register-password" class="form-control" 
-                       placeholder="Parol (kamida 6 ta belgi)" required>
-                <button type="button" class="toggle-password" onclick="togglePassword('register-password')">
-                    👁️
-                </button>
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                📝 Ro'yxatdan o'tish
-            </button>
-        </form>
+        // Email tasdiqlash yuborish
+        try {
+            await user.sendEmailVerification();
+            console.log('✅ Tasdiqlash emaili yuborildi');
+        } catch (verifyError) {
+            console.error('❌ Tasdiqlash emaili yuborilmadi:', verifyError);
+        }
 
-        <!-- Parolni tiklash Formasi -->
-        <form id="reset-form" class="auth-form">
-            <h3 class="text-center mb-2">🔑 Parolni Tiklash</h3>
-            <p class="text-center mb-2">Email manzilingizni kiriting, tiklash havolasini yuboramiz.</p>
-            <div class="form-group">
-                <label class="form-label">📧 Email</label>
-                <input type="email" id="reset-email" class="form-control" 
-                       placeholder="Email manzilingiz" required>
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%;">
-                📤 Tiklash havolasini yuborish
-            </button>
-            <div class="text-center mt-1">
-                <a href="#" onclick="switchTab('login')" style="color: var(--primary-color);">
-                    ← Kirish sahifasiga qaytish
-                </a>
-            </div>
-        </form>
-    </div>
+        // Xush kelibsiz email yuborish (EmailJS orqali)
+        try {
+            if (typeof sendWelcomeEmail === 'function') {
+                await sendWelcomeEmail(email, fullName);
+            }
+        } catch (emailError) {
+            console.log('⚠️ EmailJS xatolik (muhim emas):', emailError);
+        }
 
-    <!-- Reklama bo'limi -->
-    <div id="header-ad" class="ad-container container"></div>
+        return { 
+            success: true, 
+            message: 'Ro\'yxatdan muvaffaqiyatli o\'tdingiz! Email manzilingizni tasdiqlang.',
+            user: user 
+        };
+        
+    } catch (error) {
+        console.error('❌ Ro\'yxatdan o\'tishda xatolik:', error.code, error.message);
+        
+        let errorMessage = 'Xatolik yuz berdi. Iltimos qayta urinib ko\'ring.';
+        
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                errorMessage = 'Bu email allaqachon ro\'yxatdan o\'tgan. Iltimos, kirish qiling.';
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Noto\'g\'ri email manzil. Iltimos tekshirib qayta kiriting.';
+                break;
+            case 'auth/operation-not-allowed':
+                errorMessage = 'Email/Parol orqali kirish yoqilmagan. Admin bilan bog\'laning.';
+                break;
+            case 'auth/weak-password':
+                errorMessage = 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak.';
+                break;
+            case 'auth/network-request-failed':
+                errorMessage = 'Internet aloqasi yo\'q. Iltimos internetingizni tekshiring.';
+                break;
+            case 'auth/too-many-requests':
+                errorMessage = 'Juda ko\'p urinish. Iltimos keyinroq qayta urinib ko\'ring.';
+                break;
+            default:
+                errorMessage = `Xatolik: ${error.message}`;
+        }
+        
+        return { success: false, message: errorMessage };
+    }
+}
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    
-    <!-- EmailJS -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    
-    <!-- Google AdSense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7357410271113724" crossorigin="anonymous"></script>
-    
-    <!-- Custom JavaScript -->
-    <script src="firebase-config.js"></script>
-    <script src="emailjs-config.js"></script>
-    <script src="auth.js"></script>
-    <script src="database-manager.js"></script>
-    <script src="ads.js"></script>
-    
-    <script>
-        // Tab almashtirish
-        function switchTab(tab) {
-            const tabs = document.querySelectorAll('.auth-tab');
-            const forms = document.querySelectorAll('.auth-form');
-            
-            tabs.forEach(t => t.classList.remove('active'));
-            forms.forEach(f => f.classList.remove('active'));
-            
-            if (tab === 'login') {
-                tabs[0].classList.add('active');
-                document.getElementById('login-form').classList.add('active');
-            } else if (tab === 'register') {
-                tabs[1].classList.add('active');
-                document.getElementById('register-form').classList.add('active');
-            }
-            
-            document.getElementById('message').innerHTML = '';
+// Login qilish
+async function loginUser(email, password) {
+    try {
+        console.log('🔄 Login boshlandi...');
+        
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        console.log('✅ Login muvaffaqiyatli:', user.email);
+
+        // Oxirgi login vaqtini yangilash
+        try {
+            const now = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('users').doc(user.uid).update({
+                lastLogin: now
+            }).catch(() => {
+                // Agar hujjat bo'lmasa, yangi yaratish
+                return db.collection('users').doc(user.uid).set({
+                    email: email,
+                    lastLogin: now
+                }, { merge: true });
+            });
+        } catch (e) {
+            console.log('⚠️ Firestore yangilashda xatolik:', e);
+        }
+
+        // Realtime DB yangilash
+        try {
+            await rtdb.ref('users/' + user.uid).update({
+                lastLogin: Date.now()
+            });
+        } catch (e) {
+            console.log('⚠️ Realtime DB yangilashda xatolik:', e);
+        }
+
+        return { 
+            success: true, 
+            message: 'Muvaffaqiyatli kirdingiz!',
+            user: user 
+        };
+        
+    } catch (error) {
+        console.error('❌ Login xatolik:', error.code, error.message);
+        
+        let errorMessage = 'Xatolik yuz berdi';
+        
+        switch (error.code) {
+            case 'auth/user-not-found':
+                errorMessage = 'Bunday foydalanuvchi topilmadi. Ro\'yxatdan o\'ting.';
+                break;
+            case 'auth/wrong-password':
+                errorMessage = 'Noto\'g\'ri parol. Iltimos tekshirib qayta kiriting.';
+                break;
+            case 'auth/invalid-email':
+                errorMessage = 'Noto\'g\'ri email manzil.';
+                break;
+            case 'auth/user-disabled':
+                errorMessage = 'Bu foydalanuvchi bloklangan.';
+                break;
+            default:
+                errorMessage = `Xatolik: ${error.message}`;
         }
         
-        function showResetPassword() {
-            const tabs = document.querySelectorAll('.auth-tab');
-            const forms = document.querySelectorAll('.auth-form');
-            
-            tabs.forEach(t => t.classList.remove('active'));
-            forms.forEach(f => f.classList.remove('active'));
-            
-            document.getElementById('reset-form').classList.add('active');
+        return { success: false, message: errorMessage };
+    }
+}
+
+// Chiqish
+async function logoutUser() {
+    try {
+        await auth.signOut();
+        console.log('✅ Tizimdan chiqildi');
+        return { success: true, message: 'Tizimdan chiqdingiz' };
+    } catch (error) {
+        console.error('❌ Chiqishda xatolik:', error);
+        return { success: false, message: 'Chiqishda xatolik yuz berdi' };
+    }
+}
+
+// Parolni tiklash
+async function resetPassword(email) {
+    try {
+        await auth.sendPasswordResetEmail(email);
+        console.log('✅ Parol tiklash emaili yuborildi');
+        return { 
+            success: true, 
+            message: 'Parolni tiklash havolasi email manzilingizga yuborildi' 
+        };
+    } catch (error) {
+        console.error('❌ Parol tiklashda xatolik:', error);
+        
+        let errorMessage = 'Xatolik yuz berdi.';
+        if (error.code === 'auth/user-not-found') {
+            errorMessage = 'Bunday email topilmadi.';
         }
         
-        function showMessage(message, type) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 5000);
+        return { success: false, message: errorMessage };
+    }
+}
+
+// Email tasdiqlashni qayta yuborish
+async function resendVerificationEmail() {
+    const user = auth.currentUser;
+    if (user && !user.emailVerified) {
+        try {
+            await user.sendEmailVerification();
+            return { success: true, message: 'Tasdiqlash emaili qayta yuborildi!' };
+        } catch (error) {
+            return { success: false, message: 'Xatolik yuz berdi.' };
         }
-        
-        function showLoading(button) {
-            button.disabled = true;
-            button.innerHTML = '<span class="spinner" style="width:20px;height:20px;border-width:2px;"></span> Kuting...';
-        }
-        
-        function hideLoading(button, originalHTML) {
-            button.disabled = false;
-            button.innerHTML = originalHTML;
-        }
-        
-        // Parol ko'rsatish/yashirish
-        function togglePassword(inputId) {
-            const input = document.getElementById(inputId);
-            input.type = input.type === 'password' ? 'text' : 'password';
-        }
-        
-        // Login formasi
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('login-email').value.trim();
-            const password = document.getElementById('login-password').value;
-            const button = e.target.querySelector('button[type="submit"]');
-            const originalHTML = button.innerHTML;
-            
-            showLoading(button);
-            
-            const result = await loginUser(email, password);
-            
-            if (result.success) {
-                showMessage(result.message, 'success');
-                setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 1500);
-            } else {
-                showMessage(result.message, 'danger');
-                if (result.needVerification) {
-                    showMessage('Tasdiqlash emaili qayta yuborilsinmi? <a href="#" onclick="resendVerification()">Ha</a>', 'info');
-                }
-                hideLoading(button, originalHTML);
-            }
-        });
-        
-        // Register formasi
-        document.getElementById('register-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const fullName = document.getElementById('register-name').value.trim();
-            const email = document.getElementById('register-email').value.trim();
-            const password = document.getElementById('register-password').value;
-            const button = e.target.querySelector('button[type="submit"]');
-            const originalHTML = button.innerHTML;
-            
-            if (password.length < 6) {
-                showMessage('Parol kamida 6 ta belgidan iborat bo\'lishi kerak', 'danger');
-                return;
-            }
-            
-            if (!fullName || fullName.length < 2) {
-                showMessage('Iltimos, to\'liq ismingizni kiriting', 'danger');
-                return;
-            }
-            
-            showLoading(button);
-            
-            const result = await registerUser(email, password, fullName);
-            
-            if (result.success) {
-                showMessage(result.message, 'success');
-                setTimeout(() => {
-                    switchTab('login');
-                    document.getElementById('login-email').value = email;
-                }, 2000);
-            } else {
-                showMessage(result.message, 'danger');
-            }
-            
-            hideLoading(button, originalHTML);
-        });
-        
-        // Parolni tiklash formasi
-        document.getElementById('reset-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const email = document.getElementById('reset-email').value.trim();
-            const button = e.target.querySelector('button[type="submit"]');
-            const originalHTML = button.innerHTML;
-            
-            showLoading(button);
-            
-            const result = await resetPassword(email);
-            
-            if (result.success) {
-                showMessage(result.message, 'success');
-                setTimeout(() => {
-                    switchTab('login');
-                }, 2000);
-            } else {
-                showMessage(result.message, 'danger');
-            }
-            
-            hideLoading(button, originalHTML);
-        });
-        
-        // Tasdiqlash emailini qayta yuborish
-        async function resendVerification() {
-            const user = auth.currentUser;
-            if (user) {
-                try {
-                    await user.sendEmailVerification();
-                    showMessage('Tasdiqlash emaili yuborildi!', 'success');
-                } catch (error) {
-                    showMessage('Xatolik yuz berdi. Qayta urinib ko\'ring.', 'danger');
-                }
-            }
-        }
-    </script>
-</body>
-</html>
+    }
+    return { success: false, message: 'Email allaqachon tasdiqlangan.' };
+}
+
+// Foydalanuvchi holatini kuzatish
+auth.onAuthStateChanged((user) => {
+    if (user) {
+        console.log('✅ Foydalanuvchi tizimga kirgan:', user.email, '| Tasdiqlangan:', user.emailVerified);
+    } else {
+        console.log('❌ Foydalanuvchi tizimga kirmagan');
+    }
+});
