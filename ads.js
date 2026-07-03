@@ -1,61 +1,39 @@
-// Google AdSense reklamalari boshqaruvi
-
+// Google AdSense boshqaruvi
 class AdManager {
     constructor() {
-        this.adSlots = {
-            header: 'ca-pub-7357410271113724',
-            sidebar: 'ca-pub-7357410271113724',
-            content: 'ca-pub-7357410271113724',
-            footer: 'ca-pub-7357410271113724'
-        };
-        this.adInitialized = false;
+        this.initialized = false;
     }
 
-    // Reklamalarni yaratish
-    createAdUnit(containerId, format = 'auto') {
+    createAd(containerId) {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        const adDiv = document.createElement('div');
-        adDiv.className = 'ad-container';
-        adDiv.innerHTML = `
+        container.innerHTML = `
             <ins class="adsbygoogle"
                  style="display:block"
                  data-ad-client="ca-pub-7357410271113724"
-                 data-ad-slot="${this.adSlots[containerId] || ''}"
-                 data-ad-format="${format}"
+                 data-ad-slot=""
+                 data-ad-format="auto"
                  data-full-width-responsive="true"></ins>
         `;
-        
-        container.appendChild(adDiv);
-        
-        if (!this.adInitialized) {
+
+        try {
             (adsbygoogle = window.adsbygoogle || []).push({});
-            this.adInitialized = true;
+        } catch (e) {
+            console.log('AdSense xatolik:', e);
         }
     }
 
-    // Reklama joylarini ko'rsatish
-    showAds() {
-        this.createAdUnit('header-ad', 'auto');
-        this.createAdUnit('sidebar-ad', 'rectangle');
-        this.createAdUnit('content-ad', 'auto');
-        this.createAdUnit('footer-ad', 'auto');
-    }
-
-    // Reklamalarni optimallashtirish
-    loadOptimizedAds() {
-        // Mobil qurilmalar uchun kichikroq reklamalar
-        if (window.innerWidth < 768) {
-            this.createAdUnit('header-ad', 'horizontal');
-        } else {
-            this.showAds();
-        }
+    showAllAds() {
+        this.createAd('header-ad');
+        this.createAd('content-ad');
+        this.createAd('footer-ad');
     }
 }
 
-// AdSense yuklanganda ishga tushirish
 window.addEventListener('load', () => {
-    const adManager = new AdManager();
-    adManager.loadOptimizedAds();
+    setTimeout(() => {
+        const adManager = new AdManager();
+        adManager.showAllAds();
+    }, 1000);
 });
