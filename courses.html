@@ -23,14 +23,22 @@
         
         <div class="card mb-2">
             <div class="flex gap-2 align-center flex-wrap">
-                <input type="text" id="search-input" class="form-control" placeholder="🔍 Kurs qidirish..." style="flex:1;min-width:200px;">
+                <input type="text" id="search-input" class="form-control" 
+                       placeholder="🔍 Kurs qidirish..." style="flex:1;min-width:200px;">
                 <select id="category-filter" class="form-control" style="width:200px;">
                     <option value="">Barchasi</option>
                 </select>
             </div>
         </div>
 
-        <div class="grid" id="courses-grid"><div class="spinner"></div></div>
+        <!-- KURSLAR RO'YXATI -->
+        <div class="grid" id="courses-grid">
+            <div class="spinner"></div>
+        </div>
+        
+        <!-- TO'G'RIDAN-TO'G'RI VIDEOLAR (agar kurslarga guruhlanmagan bo'lsa) -->
+        <h2 class="mt-3 mb-2" id="videos-title" style="display:none;">🎥 Barcha Darsliklar</h2>
+        <div class="grid" id="videos-grid" style="display:none;"></div>
     </div>
 
     <footer class="footer">
@@ -53,114 +61,243 @@
         let allVideos = [];
         let allCategories = [];
 
+        console.log('🚀 Kurslar sahifasi yuklanmoqda...');
+
+        // Kategoriyalarni yuklash
         async function loadCategories() {
             try {
                 allCategories = await dbManager.getCategories();
                 const filter = document.getElementById('category-filter');
+                
                 if (allCategories.length > 0) {
                     filter.innerHTML = '<option value="">Barchasi</option>' + 
-                        allCategories.map(c => `<option value="${c.id}">${c.icon||'📁'} ${c.name}</option>`).join('');
+                        allCategories.map(c => `<option value="${c.id}">${c.icon || '📁'} ${c.name}</option>`).join('');
                 }
-            } catch (e) { console.error(e); }
-        }
-
-        async function loadVideos() {
-            const container = document.getElementById('courses-grid');
-            try {
-                allVideos = await dbManager.getActiveVideos();
-                
-                // Videolarni kurslar bo'yicha guruhlash
-                const courseGroups = {};
-                allVideos.forEach(v => {
-                    const courseId = v.courseId || v.category || 'umumiy';
-                    if (!courseGroups[courseId]) {
-                        courseGroups[courseId] = {
-                            id: courseId,
-                            title: v.courseTitle || v.category || 'Kurs',
-                            icon: v.courseIcon || '📚',
-                            description: v.courseDescription || v.description || '',
-                            count: 0
-                        };
-                    }
-                    courseGroups[courseId].count++;
-                });
-
-                const courses = Object.values(courseGroups);
-                
-                if (courses.length === 0) {
-                    container.innerHTML = '<div class="card text-center"><p>📭 Hozircha kurslar yo\'q</p></div>';
-                    return;
-                }
-
-                displayCourses(courses);
             } catch (e) {
-                console.error(e);
-                container.innerHTML = '<div class="card text-center"><p>❌ Yuklashda xatolik</p></div>';
+                console.error('Kategoriyalar xatolik:', e);
             }
         }
 
-        function displayCourses(courses) {
-            const container = document.getElementById('courses-grid');
-            container.innerHTML = courses.map(c => `
+        // VIDEOLARNI YUKLASH
+        async function loadVideos() {
+            const coursesContainer = document.getElementById('courses-grid');
+            const videosContainer = document.getElementById('videos-grid');
+            const videosTitle = document.getElementById('videos-title');
+            
+            coursesContainer.innerHTML = '<div class="spinner"></div>';
+            
+            console.log('📥 Firestore\'dan videolar yuklanmoqda...');
+            
+            try {
+                allVideos = await dbManager.getActiveVideos();
+                
+                console.log('📊 Jami videolar:', allVideos.length, 'ta');
+                
+                if (allVideos.length === 0) {
+                    coursesContainer.innerHTML = `
+                        <div class="card text-center" style="grid-column: 1 / -1;">
+                            <div style="font-size: 3rem;">📭</div>
+                            <p>Hozircha hech qanday darslik yo'q</p>
+                        </div>`;
+                    return;
+                }
+                
+                // ===== VIDEOLARNI KURSLAR BO'YICHA GURUHLASH =====
+                const courseGroups = {};
+                
+                allVideos.forEach(video => {
+                    // courseId yoki category bo'yicha guruhlash
+                    const courseKey = video.courseId || video.category || 'umumiy';
+                    
+                    if (!courseGroups[courseKey]) {
+                        courseGroups[courseKey] = {
+                            id: courseKey,
+                            title: video.courseTitle || video.category || 'Kurs',
+                            icon: video.courseIcon || '📚',
+                            description: video.courseDescription || video.description || '',
+                            videos: [],
+                            totalDuration: 0
+                        };
+                    }
+                    courseGroups[courseKey].videos.push(video);
+                });
+                
+                const courses = Object.values(courseGroups);
+                
+                console.log('📦 Guruhlangan kurslar:', courses.length, 'ta');
+                
+                // Agar faqat 1 ta kurs bo'lsa va u 'umumiy' bo'lsa, to'g'ridan-to'g'ri videolarni ko'rsatish
+                if (courses.length === 1 && courses[0].id === 'umumiy') {
+                    // Kurs konteynerini yashirish
+                    coursesContainer.style.display = 'none';
+                    
+                    // Videolarni to'g'ridan-to'g'ri ko'rsatish
+                    videosTitle.style.display = 'block';
+                    videosContainer.style.display = 'grid';
+                    
+                    displayVideosDirectly(allVideos, videosContainer);
+                } else {
+                    // Kurslar sifatida ko'rsatish
+                    coursesContainer.style.display = 'grid';
+                    videosTitle.style.display = 'none';
+                    videosContainer.style.display = 'none';
+                    
+                    displayCourses(courses, coursesContainer);
+                }
+                
+            } catch (error) {
+                console.error('❌ Videolarni yuklashda xatolik:', error);
+                coursesContainer.innerHTML = `
+                    <div class="card text-center" style="grid-column: 1 / -1;">
+                        <p>❌ Yuklashda xatolik yuz berdi</p>
+                    </div>`;
+            }
+        }
+
+        // Kurslarni ko'rsatish
+        function displayCourses(courses, container) {
+            container.innerHTML = courses.map(course => `
                 <div class="course-card">
                     <div class="course-card-header">
-                        <div style="font-size:3rem;">${c.icon}</div>
-                        <h3>${c.title}</h3>
+                        <div style="font-size: 3rem;">${course.icon || '📚'}</div>
+                        <h3>${course.title}</h3>
                     </div>
                     <div class="course-card-body">
-                        <p>${c.description ? c.description.substring(0, 100) + '...' : ''}</p>
-                        <p>📚 ${c.count} ta darslik</p>
+                        <p>${course.description ? course.description.substring(0, 100) + '...' : ''}</p>
+                        <p><strong>📚 ${course.videos.length} ta darslik</strong></p>
                     </div>
                     <div class="course-card-footer">
-                        <button class="btn btn-primary w-full" onclick="startCourse('${c.id}')">🎓 Kursni Boshlash</button>
+                        <button class="btn btn-primary w-full" onclick="openCoursePlayer('${course.id}')">
+                            🎓 Kursni Boshlash
+                        </button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function startCourse(courseId) {
-            const courseVideos = allVideos.filter(v => (v.courseId === courseId) || (v.category === courseId));
-            let courseData = { title: 'Kurs', icon: '📚', description: '', count: courseVideos.length };
+        // Videolarni to'g'ridan-to'g'ri ko'rsatish
+        function displayVideosDirectly(videos, container) {
+            container.innerHTML = videos.map(video => `
+                <div class="course-card" onclick="playSingleVideo('${video.id}')" style="cursor:pointer;">
+                    <div class="course-card-header" style="background: #111; position: relative; padding: 0; min-height: 180px; display: flex; align-items: center; justify-content: center;">
+                        ${video.thumbnailUrl ? 
+                            `<img src="${video.thumbnailUrl}" alt="${video.title}" style="width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0;">
+                             <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;">
+                                <span style="font-size:3rem;">▶️</span>
+                             </div>` : 
+                            `<span style="font-size:3rem;">🎬</span>`
+                        }
+                    </div>
+                    <div class="course-card-body">
+                        <h3>${video.title || 'Darslik'}</h3>
+                        ${video.description ? `<p style="font-size:0.85rem;color:var(--text-secondary);">${video.description.substring(0, 80)}...</p>` : ''}
+                        <div class="flex justify-between align-center mt-1">
+                            <small>👁️ ${video.views || 0} ko'rishlar</small>
+                            <small>⏱️ ${video.duration || ''}</small>
+                        </div>
+                        <span class="badge badge-info">${video.level || 'Boshlang\'ich'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Kurs player'ni ochish
+        function openCoursePlayer(courseId) {
+            console.log('🎓 Kurs ochilmoqda:', courseId);
+            
+            const courseVideos = allVideos.filter(v => 
+                (v.courseId === courseId) || (v.category === courseId)
+            );
+            
+            let courseData = {
+                title: courseId,
+                icon: '📚',
+                description: '',
+                videos: courseVideos
+            };
+            
             if (courseVideos.length > 0) {
-                courseData.title = courseVideos[0].courseTitle || courseVideos[0].category || 'Kurs';
+                courseData.title = courseVideos[0].courseTitle || courseVideos[0].category || courseId;
                 courseData.icon = courseVideos[0].courseIcon || '📚';
-                courseData.description = courseVideos[0].courseDescription || '';
+                courseData.description = courseVideos[0].courseDescription || courseVideos[0].description || '';
             }
+            
             if (typeof videoPlayer !== 'undefined') {
                 videoPlayer.openCourse(courseId, courseData);
+            } else {
+                alert('Video player yuklanmagan. Sahifani yangilang.');
             }
         }
 
-        document.getElementById('search-input').addEventListener('input', () => {
-            const term = document.getElementById('search-input').value.toLowerCase();
-            const filtered = allVideos.filter(v => v.title?.toLowerCase().includes(term));
-            const courseGroups = {};
-            filtered.forEach(v => {
-                const cid = v.courseId || v.category || 'umumiy';
-                if (!courseGroups[cid]) courseGroups[cid] = { id: cid, title: v.courseTitle || v.category || 'Kurs', icon: v.courseIcon || '📚', description: v.courseDescription || '', count: 0 };
-                courseGroups[cid].count++;
-            });
-            displayCourses(Object.values(courseGroups));
+        // Bitta videoni o'ynatish
+        function playSingleVideo(videoId) {
+            const video = allVideos.find(v => v.id === videoId);
+            if (video && typeof videoPlayer !== 'undefined') {
+                const courseId = video.courseId || video.category || 'umumiy';
+                videoPlayer.openCourse(courseId, {
+                    title: video.title || 'Darslik',
+                    icon: '🎬',
+                    description: video.description || ''
+                });
+            }
+        }
+
+        // Qidiruv
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            const filtered = allVideos.filter(v => 
+                (v.title && v.title.toLowerCase().includes(term)) ||
+                (v.description && v.description.toLowerCase().includes(term)) ||
+                (v.category && v.category.toLowerCase().includes(term))
+            );
+            
+            const container = document.getElementById('videos-grid');
+            if (filtered.length === 0) {
+                container.innerHTML = '<p class="text-center" style="grid-column:1/-1;">📭 Hech narsa topilmadi</p>';
+                return;
+            }
+            displayVideosDirectly(filtered, container);
+            
+            // Kurs konteynerini yashirish, videolarni ko'rsatish
+            document.getElementById('courses-grid').style.display = 'none';
+            document.getElementById('videos-title').style.display = 'block';
+            container.style.display = 'grid';
         });
 
+        // Kategoriya filtri
         document.getElementById('category-filter').addEventListener('change', (e) => {
-            const cat = e.target.value;
-            const filtered = cat ? allVideos.filter(v => v.category === cat) : allVideos;
-            const courseGroups = {};
-            filtered.forEach(v => {
-                const cid = v.courseId || v.category || 'umumiy';
-                if (!courseGroups[cid]) courseGroups[cid] = { id: cid, title: v.courseTitle || v.category || 'Kurs', icon: v.courseIcon || '📚', description: v.courseDescription || '', count: 0 };
-                courseGroups[cid].count++;
-            });
-            displayCourses(Object.values(courseGroups));
+            const catId = e.target.value;
+            
+            if (!catId) {
+                loadVideos();
+                return;
+            }
+            
+            const filtered = allVideos.filter(v => v.category === catId);
+            const container = document.getElementById('videos-grid');
+            
+            if (filtered.length === 0) {
+                container.innerHTML = '<p class="text-center" style="grid-column:1/-1;">📭 Bu kategoriyada darsliklar yo\'q</p>';
+                document.getElementById('courses-grid').style.display = 'none';
+                document.getElementById('videos-title').style.display = 'block';
+                container.style.display = 'grid';
+                return;
+            }
+            
+            displayVideosDirectly(filtered, container);
+            document.getElementById('courses-grid').style.display = 'none';
+            document.getElementById('videos-title').style.display = 'block';
+            container.style.display = 'grid';
         });
 
+        // Auth
         auth.onAuthStateChanged(user => {
             const link = document.getElementById('auth-link');
             if (user) { link.textContent = 'Kabinet'; link.href = 'dashboard.html'; }
             else { link.textContent = 'Kirish'; link.href = 'auth.html'; }
         });
 
+        // Sahifa yuklanganda
         document.addEventListener('DOMContentLoaded', async () => {
             await loadCategories();
             await loadVideos();
