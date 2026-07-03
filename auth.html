@@ -4,17 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ANFKA Academy - Kirish</title>
-    <link rel="stylesheet" href="style.css">
-    <style>
-        .auth-container { max-width: 450px; margin: 100px auto; padding: 2rem; }
-        .auth-tabs { display: flex; margin-bottom: 2rem; border-bottom: 2px solid var(--border-color); }
-        .auth-tab { flex: 1; padding: 1rem; text-align: center; cursor: pointer; border: none; background: none; font-size: 1.1rem; font-weight: 500; color: var(--text-secondary); transition: all 0.3s; }
-        .auth-tab.active { color: var(--primary-color); border-bottom: 2px solid var(--primary-color); }
-        .auth-form { display: none; }
-        .auth-form.active { display: block; }
-        .password-field { position: relative; }
-        .toggle-password { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; background: none; border: none; font-size: 1.2rem; }
-    </style>
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <nav class="navbar">
@@ -34,7 +24,6 @@
 
         <div id="message"></div>
 
-        <!-- Login Form -->
         <form id="login-form" class="auth-form active">
             <div class="form-group">
                 <label class="form-label">📧 Email</label>
@@ -45,41 +34,38 @@
                 <input type="password" id="login-password" class="form-control" placeholder="Parolingiz" required>
                 <button type="button" class="toggle-password" onclick="togglePassword('login-password')">👁️</button>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;">🔑 Kirish</button>
+            <button type="submit" class="btn btn-primary w-full">🔑 Kirish</button>
             <div class="text-center mt-1">
-                <a href="#" onclick="showResetPassword()" style="color: var(--primary-color);">Parolni unutdingizmi?</a>
+                <a href="#" onclick="showReset()" style="color:var(--primary-color);">Parolni unutdingizmi?</a>
             </div>
         </form>
 
-        <!-- Register Form -->
         <form id="register-form" class="auth-form">
             <div class="form-group">
                 <label class="form-label">👤 To'liq ism</label>
-                <input type="text" id="register-name" class="form-control" placeholder="Ismingiz va familiyangiz" required autocomplete="name">
+                <input type="text" id="register-name" class="form-control" placeholder="Ismingiz" required>
             </div>
             <div class="form-group">
                 <label class="form-label">📧 Email</label>
-                <input type="email" id="register-email" class="form-control" placeholder="Email manzilingiz" required autocomplete="email">
+                <input type="email" id="register-email" class="form-control" placeholder="Email" required>
             </div>
             <div class="form-group password-field">
                 <label class="form-label">🔒 Parol</label>
-                <input type="password" id="register-password" class="form-control" placeholder="Parol (kamida 6 ta belgi)" required minlength="6" autocomplete="new-password">
+                <input type="password" id="register-password" class="form-control" placeholder="Kamida 6 belgi" required minlength="6">
                 <button type="button" class="toggle-password" onclick="togglePassword('register-password')">👁️</button>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;" id="register-submit-btn">📝 Ro'yxatdan o'tish</button>
+            <button type="submit" class="btn btn-primary w-full" id="register-submit-btn">📝 Ro'yxatdan o'tish</button>
         </form>
 
-        <!-- Reset Form -->
         <form id="reset-form" class="auth-form">
             <h3 class="text-center mb-2">🔑 Parolni Tiklash</h3>
-            <p class="text-center mb-2">Email manzilingizni kiriting, tiklash havolasini yuboramiz.</p>
             <div class="form-group">
                 <label class="form-label">📧 Email</label>
-                <input type="email" id="reset-email" class="form-control" placeholder="Email manzilingiz" required>
+                <input type="email" id="reset-email" class="form-control" placeholder="Email" required>
             </div>
-            <button type="submit" class="btn btn-primary" style="width:100%;">📤 Tiklash havolasini yuborish</button>
+            <button type="submit" class="btn btn-primary w-full">📤 Yuborish</button>
             <div class="text-center mt-1">
-                <a href="#" onclick="switchTab('login')" style="color: var(--primary-color);">← Kirish sahifasiga qaytish</a>
+                <a href="#" onclick="switchTab('login')" style="color:var(--primary-color);">← Qaytish</a>
             </div>
         </form>
     </div>
@@ -88,20 +74,13 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7357410271113724" crossorigin="anonymous"></script>
-    
-    <script src="firebase-config.js"></script>
-    <script src="emailjs-config.js"></script>
-    <script src="auth.js"></script>
-    <script src="database-manager.js"></script>
-    <script src="ads.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/auth.js"></script>
 
     <script>
         function switchTab(tab) {
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-            
             if (tab === 'login') {
                 document.querySelectorAll('.auth-tab')[0].classList.add('active');
                 document.getElementById('login-form').classList.add('active');
@@ -112,7 +91,7 @@
             document.getElementById('message').innerHTML = '';
         }
 
-        function showResetPassword() {
+        function showReset() {
             document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
             document.getElementById('reset-form').classList.add('active');
@@ -129,108 +108,61 @@
             setTimeout(() => div.innerHTML = '', 5000);
         }
 
-        // Login
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim();
             const password = document.getElementById('login-password').value;
             const btn = e.target.querySelector('button');
-            const orig = btn.innerHTML;
-            
             btn.disabled = true;
             btn.innerHTML = 'Kuting...';
-            
             const result = await loginUser(email, password);
-            
             if (result.success) {
                 showMessage(result.message, 'success');
                 setTimeout(() => window.location.href = 'dashboard.html', 1500);
             } else {
                 showMessage(result.message, 'danger');
                 btn.disabled = false;
-                btn.innerHTML = orig;
+                btn.innerHTML = '🔑 Kirish';
             }
         });
 
-        // Register
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const fullName = document.getElementById('register-name').value.trim();
             const email = document.getElementById('register-email').value.trim();
             const password = document.getElementById('register-password').value;
             const btn = document.getElementById('register-submit-btn');
-            const orig = btn.innerHTML;
             
-            if (!fullName || fullName.length < 2) {
-                showMessage('Iltimos, to\'liq ismingizni kiriting', 'danger');
-                return;
-            }
-            if (!email.includes('@')) {
-                showMessage('To\'g\'ri email manzil kiriting', 'danger');
-                return;
-            }
-            if (password.length < 6) {
-                showMessage('Parol kamida 6 ta belgidan iborat bo\'lishi kerak', 'danger');
-                return;
-            }
+            if (!fullName || fullName.length < 2) { showMessage('To\'liq ism kiriting', 'danger'); return; }
+            if (!email.includes('@')) { showMessage('To\'g\'ri email kiriting', 'danger'); return; }
+            if (password.length < 6) { showMessage('Parol kamida 6 belgi', 'danger'); return; }
             
             btn.disabled = true;
             btn.innerHTML = 'Ro\'yxatdan o\'tilmoqda...';
             
-            console.log('📤 Register yuborilmoqda:', { fullName, email });
-            
-            try {
-                const result = await registerUser(email, password, fullName);
-                console.log('📥 Register natija:', result);
-                
-                if (result.success) {
-                    showMessage('✅ ' + result.message, 'success');
-                    document.getElementById('register-form').reset();
-                    setTimeout(() => {
-                        switchTab('login');
-                        document.getElementById('login-email').value = email;
-                        showMessage('Email manzilingizni tasdiqlang va tizimga kiring', 'info');
-                    }, 2000);
-                } else {
-                    showMessage('❌ ' + result.message, 'danger');
-                    btn.disabled = false;
-                    btn.innerHTML = orig;
-                }
-            } catch (error) {
-                console.error('Kutilmagan xatolik:', error);
-                showMessage('❌ Kutilmagan xatolik yuz berdi', 'danger');
+            const result = await registerUser(email, password, fullName);
+            if (result.success) {
+                showMessage('✅ ' + result.message, 'success');
+                document.getElementById('register-form').reset();
+                setTimeout(() => { switchTab('login'); document.getElementById('login-email').value = email; }, 2000);
+            } else {
+                showMessage('❌ ' + result.message, 'danger');
                 btn.disabled = false;
-                btn.innerHTML = orig;
+                btn.innerHTML = '📝 Ro\'yxatdan o\'tish';
             }
         });
 
-        // Reset password
         document.getElementById('reset-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('reset-email').value.trim();
             const btn = e.target.querySelector('button');
-            const orig = btn.innerHTML;
-            
             btn.disabled = true;
             btn.innerHTML = 'Yuborilmoqda...';
-            
             const result = await resetPassword(email);
-            
-            if (result.success) {
-                showMessage(result.message, 'success');
-                setTimeout(() => switchTab('login'), 2000);
-            } else {
-                showMessage(result.message, 'danger');
-            }
+            showMessage(result.message, result.success ? 'success' : 'danger');
             btn.disabled = false;
-            btn.innerHTML = orig;
-        });
-
-        auth.onAuthStateChanged(user => {
-            if (user && user.emailVerified) {
-                window.location.href = 'dashboard.html';
-            }
+            btn.innerHTML = '📤 Yuborish';
+            if (result.success) setTimeout(() => switchTab('login'), 2000);
         });
     </script>
 </body>
