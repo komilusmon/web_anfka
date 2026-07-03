@@ -3,15 +3,14 @@
 // Ro'yxatdan o'tish
 async function registerUser(email, password, fullName) {
     try {
-        console.log('🔄 Ro\'yxatdan o\'tish boshlandi...', { email, fullName });
+        console.log('🔄 Ro\'yxatdan o\'tish boshlandi...');
         
-        // Firebase Authentication orqali foydalanuvchi yaratish
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
         console.log('✅ Foydalanuvchi yaratildi:', user.uid);
 
-        // Firestore-ga foydalanuvchi ma'lumotlarini saqlash
+        // Firestore-ga saqlash
         try {
             await db.collection('users').doc(user.uid).set({
                 fullName: fullName,
@@ -25,12 +24,11 @@ async function registerUser(email, password, fullName) {
                 streak: 1
             });
             console.log('✅ Firestore-ga saqlandi');
-        } catch (firestoreError) {
-            console.error('❌ Firestore xatolik:', firestoreError);
-            // Firestore xatoligi bo'lsa ham davom etamiz
+        } catch (e) {
+            console.error('Firestore xatolik:', e);
         }
 
-        // Realtime Database-ga ham saqlash
+        // Realtime DB-ga saqlash
         try {
             await rtdb.ref('users/' + user.uid).set({
                 fullName: fullName,
@@ -42,25 +40,23 @@ async function registerUser(email, password, fullName) {
                 progress: {}
             });
             console.log('✅ Realtime DB-ga saqlandi');
-        } catch (rtdbError) {
-            console.error('❌ Realtime DB xatolik:', rtdbError);
+        } catch (e) {
+            console.error('Realtime DB xatolik:', e);
         }
 
-        // Email tasdiqlash yuborish
+        // Email tasdiqlash
         try {
             await user.sendEmailVerification();
             console.log('✅ Tasdiqlash emaili yuborildi');
-        } catch (verifyError) {
-            console.error('❌ Tasdiqlash emaili yuborilmadi:', verifyError);
+        } catch (e) {
+            console.error('Tasdiqlash emaili:', e);
         }
 
-        // Xush kelibsiz email yuborish (EmailJS orqali)
+        // Xush kelibsiz email (xatolik bo'lsa ham davom etadi)
         try {
-            if (typeof sendWelcomeEmail === 'function') {
-                await sendWelcomeEmail(email, fullName);
-            }
-        } catch (emailError) {
-            console.log('⚠️ EmailJS xatolik (muhim emas):', emailError);
+            await sendWelcomeEmail(email, fullName);
+        } catch (e) {
+            console.log('EmailJS:', e);
         }
 
         return { 
@@ -70,31 +66,25 @@ async function registerUser(email, password, fullName) {
         };
         
     } catch (error) {
-        console.error('❌ Ro\'yxatdan o\'tishda xatolik:', error.code, error.message);
+        console.error('❌ Ro\'yxatdan o\'tish xatolik:', error.code);
         
-        let errorMessage = 'Xatolik yuz berdi. Iltimos qayta urinib ko\'ring.';
+        let errorMessage = 'Xatolik yuz berdi';
         
         switch (error.code) {
             case 'auth/email-already-in-use':
-                errorMessage = 'Bu email allaqachon ro\'yxatdan o\'tgan. Iltimos, kirish qiling.';
+                errorMessage = 'Bu email allaqachon ro\'yxatdan o\'tgan';
                 break;
             case 'auth/invalid-email':
-                errorMessage = 'Noto\'g\'ri email manzil. Iltimos tekshirib qayta kiriting.';
+                errorMessage = 'Noto\'g\'ri email manzil';
                 break;
             case 'auth/operation-not-allowed':
-                errorMessage = 'Email/Parol orqali kirish yoqilmagan. Admin bilan bog\'laning.';
+                errorMessage = 'Email/Parol orqali kirish yoqilmagan';
                 break;
             case 'auth/weak-password':
-                errorMessage = 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak.';
-                break;
-            case 'auth/network-request-failed':
-                errorMessage = 'Internet aloqasi yo\'q. Iltimos internetingizni tekshiring.';
-                break;
-            case 'auth/too-many-requests':
-                errorMessage = 'Juda ko\'p urinish. Iltimos keyinroq qayta urinib ko\'ring.';
+                errorMessage = 'Parol kamida 6 ta belgidan iborat bo\'lishi kerak';
                 break;
             default:
-                errorMessage = `Xatolik: ${error.message}`;
+                errorMessage = error.message;
         }
         
         return { success: false, message: errorMessage };
@@ -109,31 +99,23 @@ async function loginUser(email, password) {
         const userCredential = await auth.signInWithEmailAndPassword(email, password);
         const user = userCredential.user;
         
-        console.log('✅ Login muvaffaqiyatli:', user.email);
+        console.log('✅ Login muvaffaqiyatli');
 
         // Oxirgi login vaqtini yangilash
         try {
-            const now = firebase.firestore.FieldValue.serverTimestamp();
-            await db.collection('users').doc(user.uid).update({
-                lastLogin: now
-            }).catch(() => {
-                // Agar hujjat bo'lmasa, yangi yaratish
-                return db.collection('users').doc(user.uid).set({
-                    email: email,
-                    lastLogin: now
-                }, { merge: true });
-            });
+            await db.collection('users').doc(user.uid).set({
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
         } catch (e) {
-            console.log('⚠️ Firestore yangilashda xatolik:', e);
+            console.log('Firestore yangilash:', e);
         }
 
-        // Realtime DB yangilash
         try {
             await rtdb.ref('users/' + user.uid).update({
                 lastLogin: Date.now()
             });
         } catch (e) {
-            console.log('⚠️ Realtime DB yangilashda xatolik:', e);
+            console.log('Realtime DB yangilash:', e);
         }
 
         return { 
@@ -143,25 +125,22 @@ async function loginUser(email, password) {
         };
         
     } catch (error) {
-        console.error('❌ Login xatolik:', error.code, error.message);
+        console.error('❌ Login xatolik:', error.code);
         
         let errorMessage = 'Xatolik yuz berdi';
         
         switch (error.code) {
             case 'auth/user-not-found':
-                errorMessage = 'Bunday foydalanuvchi topilmadi. Ro\'yxatdan o\'ting.';
+                errorMessage = 'Bunday foydalanuvchi topilmadi';
                 break;
             case 'auth/wrong-password':
-                errorMessage = 'Noto\'g\'ri parol. Iltimos tekshirib qayta kiriting.';
+                errorMessage = 'Noto\'g\'ri parol';
                 break;
             case 'auth/invalid-email':
-                errorMessage = 'Noto\'g\'ri email manzil.';
-                break;
-            case 'auth/user-disabled':
-                errorMessage = 'Bu foydalanuvchi bloklangan.';
+                errorMessage = 'Noto\'g\'ri email manzil';
                 break;
             default:
-                errorMessage = `Xatolik: ${error.message}`;
+                errorMessage = error.message;
         }
         
         return { success: false, message: errorMessage };
@@ -190,36 +169,31 @@ async function resetPassword(email) {
             message: 'Parolni tiklash havolasi email manzilingizga yuborildi' 
         };
     } catch (error) {
-        console.error('❌ Parol tiklashda xatolik:', error);
-        
-        let errorMessage = 'Xatolik yuz berdi.';
-        if (error.code === 'auth/user-not-found') {
-            errorMessage = 'Bunday email topilmadi.';
-        }
-        
-        return { success: false, message: errorMessage };
+        console.error('❌ Parol tiklash xatolik:', error);
+        return { 
+            success: false, 
+            message: 'Xatolik yuz berdi. Email manzilni tekshiring' 
+        };
     }
-}
-
-// Email tasdiqlashni qayta yuborish
-async function resendVerificationEmail() {
-    const user = auth.currentUser;
-    if (user && !user.emailVerified) {
-        try {
-            await user.sendEmailVerification();
-            return { success: true, message: 'Tasdiqlash emaili qayta yuborildi!' };
-        } catch (error) {
-            return { success: false, message: 'Xatolik yuz berdi.' };
-        }
-    }
-    return { success: false, message: 'Email allaqachon tasdiqlangan.' };
 }
 
 // Foydalanuvchi holatini kuzatish
 auth.onAuthStateChanged((user) => {
     if (user) {
-        console.log('✅ Foydalanuvchi tizimga kirgan:', user.email, '| Tasdiqlangan:', user.emailVerified);
+        console.log('✅ Foydalanuvchi:', user.email, '| Tasdiqlangan:', user.emailVerified);
+        
+        // Auth sahifasida bo'lsa, dashboardga yo'naltirish
+        if (window.location.pathname.includes('auth.html') && user.emailVerified) {
+            window.location.href = 'dashboard.html';
+        }
     } else {
         console.log('❌ Foydalanuvchi tizimga kirmagan');
+        
+        // Dashboardda bo'lsa, auth sahifasiga yo'naltirish
+        if (window.location.pathname.includes('dashboard.html')) {
+            window.location.href = 'auth.html';
+        }
     }
 });
+
+console.log('✅ Auth tizimi tayyor');
