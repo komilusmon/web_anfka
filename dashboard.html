@@ -44,6 +44,8 @@
             overflow-y: auto;
             margin-bottom: 1rem;
             padding-right: 0.5rem;
+            min-height: 200px;
+            max-height: 350px;
         }
         .chat-messages::-webkit-scrollbar {
             width: 6px;
@@ -99,6 +101,11 @@
             font-size: 4rem;
             margin-bottom: 1rem;
         }
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -109,7 +116,7 @@
             <li><a href="index.html" class="nav-link">Asosiy</a></li>
             <li><a href="courses.html" class="nav-link">Kurslar</a></li>
             <li><a href="contact.html" class="nav-link">Aloqa</a></li>
-            <li><a href="#" class="nav-link" id="logout-btn">Chiqish</a></li>
+            <li><a href="#" class="nav-link btn-auth" id="logout-btn">Chiqish</a></li>
         </ul>
     </nav>
 
@@ -145,10 +152,10 @@
         <div id="header-ad" class="ad-container"></div>
 
         <!-- Asosiy kontent grid -->
-        <div class="grid" style="grid-template-columns: 2fr 1fr; gap: 2rem;">
+        <div class="grid dashboard-grid" style="grid-template-columns: 2fr 1fr; gap: 2rem;">
             <!-- Chap tomonda - Kurslar -->
             <div>
-                <div class="flex justify-between align-center mb-2">
+                <div class="flex justify-between align-center mb-2" style="flex-wrap: wrap; gap: 0.5rem;">
                     <h2>📚 Mening Kurslarim</h2>
                     <a href="courses.html" class="btn btn-outline">+ Yangi kurs</a>
                 </div>
@@ -175,7 +182,7 @@
                     </div>
                     <div class="chat-input-group">
                         <input type="text" id="chat-input" class="form-control" 
-                               placeholder="Xabar yozing...">
+                               placeholder="Xabar yozing..." style="flex: 1;">
                         <button onclick="sendChatMessage()" class="btn btn-primary">📤</button>
                     </div>
                 </div>
@@ -220,38 +227,14 @@
         // Global o'zgaruvchilar
         let currentUser = null;
         
-        // Default kurslar (Firebase bo'sh bo'lganda)
+        // Default kurslar
         const defaultCourses = [
-            {
-                id: 'web-dev', title: 'Web Dasturlash', icon: '🌐', lessonsCount: 24,
-                description: 'HTML, CSS va JavaScript asoslari',
-                category: 'programming', level: 'Boshlang\'ich'
-            },
-            {
-                id: 'python', title: 'Python Dasturlash', icon: '🐍', lessonsCount: 30,
-                description: 'Python dasturlash asoslari',
-                category: 'programming', level: 'Boshlang\'ich'
-            },
-            {
-                id: 'graphic-design', title: 'Grafik Dizayn', icon: '🎨', lessonsCount: 18,
-                description: 'Dizayn asoslari',
-                category: 'design', level: 'O\'rta'
-            },
-            {
-                id: 'digital-marketing', title: 'Raqamli Marketing', icon: '📈', lessonsCount: 20,
-                description: 'Marketing strategiyalari',
-                category: 'marketing', level: 'Boshlang\'ich'
-            },
-            {
-                id: 'react-js', title: 'React JS', icon: '⚛️', lessonsCount: 28,
-                description: 'Frontend kutubxonasi',
-                category: 'programming', level: 'O\'rta'
-            },
-            {
-                id: 'ui-ux', title: 'UI/UX Dizayn', icon: '🎯', lessonsCount: 22,
-                description: 'Interfeys dizayni',
-                category: 'design', level: 'Boshlang\'ich'
-            }
+            { id: 'web-dev', title: 'Web Dasturlash', icon: '🌐', lessonsCount: 24, description: 'HTML, CSS va JavaScript asoslari', level: 'Boshlang\'ich' },
+            { id: 'python', title: 'Python Dasturlash', icon: '🐍', lessonsCount: 30, description: 'Python dasturlash asoslari', level: 'Boshlang\'ich' },
+            { id: 'graphic-design', title: 'Grafik Dizayn', icon: '🎨', lessonsCount: 18, description: 'Dizayn asoslari', level: 'O\'rta' },
+            { id: 'digital-marketing', title: 'Raqamli Marketing', icon: '📈', lessonsCount: 20, description: 'Marketing strategiyalari', level: 'Boshlang\'ich' },
+            { id: 'react-js', title: 'React JS', icon: '⚛️', lessonsCount: 28, description: 'Frontend kutubxonasi', level: 'O\'rta' },
+            { id: 'ui-ux', title: 'UI/UX Dizayn', icon: '🎯', lessonsCount: 22, description: 'Interfeys dizayni', level: 'Boshlang\'ich' }
         ];
         
         // ============ ASOSIY FUNKSIYALAR ============
@@ -264,22 +247,13 @@
                 return;
             }
             
-            // Asosiy ma'lumotlarni yuklash
+            console.log('📊 Dashboard yuklanmoqda...');
+            
             await loadUserInfo();
-            
-            // Kurslarni yuklash
             await loadMyCourses();
-            
-            // Statistikani yuklash
             await loadStatistics();
-            
-            // Oxirgi darsliklarni yuklash
             await loadRecentLessons();
-            
-            // Yangiliklarni yuklash
             await loadNewsWidget();
-            
-            // Chatni yuklash
             loadChat();
             
             console.log('✅ Dashboard to\'liq yuklandi');
@@ -294,59 +268,46 @@
                 
                 if (userDoc.exists) {
                     const userData = userDoc.data();
-                    
-                    // Salomlashish
                     const greeting = getGreeting();
+                    
                     document.getElementById('user-greeting').textContent = 
                         `${greeting} ${userData.fullName || 'Foydalanuvchi'}!`;
                     
-                    // A'zo bo'lgan sana
                     if (userData.createdAt) {
                         const date = userData.createdAt.toDate();
                         document.getElementById('member-since-display').textContent = 
-                            `📅 A'zo bo'lgan: ${date.toLocaleDateString('uz-UZ', { 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                            })}`;
+                            `📅 A'zo bo'lgan: ${date.toLocaleDateString('uz-UZ', { year: 'numeric', month: 'long', day: 'numeric' })}`;
                     }
                     
-                    // Streak (ketma-ket kunlar)
+                    // Streak
                     if (userData.lastLogin) {
                         const lastLogin = userData.lastLogin.toDate();
                         const today = new Date();
                         const diffDays = Math.floor((today - lastLogin) / (1000 * 60 * 60 * 24));
                         
+                        let streak = userData.streak || 1;
                         if (diffDays <= 1) {
-                            const streak = (userData.streak || 0) + 1;
-                            document.getElementById('streak-days').textContent = streak;
-                            
-                            // Streakni yangilash
-                            await db.collection('users').doc(currentUser.uid).update({
-                                streak: streak,
-                                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        } else if (diffDays > 1) {
-                            // Streak uzilgan
-                            document.getElementById('streak-days').textContent = '1';
-                            await db.collection('users').doc(currentUser.uid).update({
-                                streak: 1,
-                                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-                            });
+                            streak = diffDays === 0 ? streak : streak + 1;
+                        } else {
+                            streak = 1;
                         }
+                        
+                        document.getElementById('streak-days').textContent = streak;
+                        
+                        await db.collection('users').doc(currentUser.uid).update({
+                            streak: streak,
+                            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                        }).catch(() => {});
                     }
                 } else {
                     document.getElementById('user-greeting').textContent = 
-                        `👋 Xush kelibsiz, ${currentUser.email}!`;
+                        `👋 Xush kelibsiz!`;
                 }
             } catch (error) {
-                console.error('Foydalanuvchi ma\'lumotlarini yuklashda xatolik:', error);
-                document.getElementById('user-greeting').textContent = 
-                    `👋 Xush kelibsiz!`;
+                console.error('Foydalanuvchi ma\'lumotlari xatolik:', error);
             }
         }
         
-        // Kun vaqtiga qarab salomlashish
         function getGreeting() {
             const hour = new Date().getHours();
             if (hour < 6) return '🌙 Xayrli tun';
@@ -370,22 +331,24 @@
                 const userData = userDoc.data();
                 const courseIds = userData.courses || [];
                 
-                // Realtime Database'dan ham tekshirish
-                const rtdbCourses = await rtdb.ref(`users/${currentUser.uid}/courses`).once('value');
-                const rtdbCourseData = rtdbCourses.val() || {};
-                const allCourseIds = [...new Set([...courseIds, ...Object.keys(rtdbCourseData)])];
+                // Realtime Database'dan ham
+                let rtdbCourseIds = [];
+                try {
+                    const rtdbSnap = await rtdb.ref(`users/${currentUser.uid}/courses`).once('value');
+                    const rtdbData = rtdbSnap.val() || {};
+                    rtdbCourseIds = Object.keys(rtdbData);
+                } catch (e) {}
+                
+                const allCourseIds = [...new Set([...courseIds, ...rtdbCourseIds])];
                 
                 if (allCourseIds.length === 0) {
                     showEmptyCourses(container);
                     return;
                 }
                 
-                // Jami kurslar sonini yangilash
                 document.getElementById('total-courses').textContent = allCourseIds.length;
-                
                 container.innerHTML = '';
                 
-                // Har bir kurs uchun ma'lumotlarni yuklash
                 for (const courseId of allCourseIds) {
                     await loadCourseCard(container, courseId);
                 }
@@ -396,53 +359,59 @@
             }
         }
         
-        // Bitta kurs kartochkasini yuklash
         async function loadCourseCard(container, courseId) {
             try {
                 let courseInfo = null;
                 
-                // 1. Firestore'dan videolarni izlash
-                const videosSnapshot = await db.collection('videos')
+                // Firestore'dan videolarni izlash
+                let snapshot = await db.collection('videos')
                     .where('courseId', '==', courseId)
                     .limit(1)
                     .get();
                 
-                if (!videosSnapshot.empty) {
-                    const firstVideo = videosSnapshot.docs[0].data();
+                if (!snapshot.empty) {
+                    const firstVideo = snapshot.docs[0].data();
+                    const countSnap = await db.collection('videos')
+                        .where('courseId', '==', courseId)
+                        .get();
+                    
                     courseInfo = {
                         id: courseId,
                         title: firstVideo.courseTitle || 'Kurs',
                         icon: firstVideo.courseIcon || '📚',
                         description: firstVideo.courseDescription || '',
-                        lessonsCount: videosSnapshot.size
+                        lessonsCount: countSnap.size
                     };
                 } else {
-                    // 2. Default kurslardan izlash
-                    courseInfo = defaultCourses.find(c => c.id === courseId);
-                }
-                
-                // 3. Realtime Database'dan ma'lumot
-                if (!courseInfo) {
-                    const rtdbCourse = await rtdb.ref(`users/${currentUser.uid}/courses/${courseId}`).once('value');
-                    const rtdbData = rtdbCourse.val();
-                    if (rtdbData) {
+                    // categoryId bo'yicha
+                    snapshot = await db.collection('videos')
+                        .where('categoryId', '==', courseId)
+                        .limit(1)
+                        .get();
+                    
+                    if (!snapshot.empty) {
+                        const firstVideo = snapshot.docs[0].data();
+                        const countSnap = await db.collection('videos')
+                            .where('categoryId', '==', courseId)
+                            .get();
+                        
                         courseInfo = {
                             id: courseId,
-                            title: rtdbData.title || 'Kurs',
-                            icon: '📚',
-                            description: '',
-                            lessonsCount: rtdbData.totalLessons || 0
+                            title: firstVideo.courseTitle || firstVideo.categoryName || 'Kurs',
+                            icon: firstVideo.courseIcon || '📚',
+                            description: firstVideo.courseDescription || '',
+                            lessonsCount: countSnap.size
                         };
+                    } else {
+                        courseInfo = defaultCourses.find(c => c.id === courseId);
                     }
                 }
                 
                 if (!courseInfo) return;
                 
-                // Progress hisoblash
                 const { completedLessons, totalLessons, progressPercent } = 
                     await calculateProgress(courseId, courseInfo.lessonsCount || 0);
                 
-                // Kartochka yaratish
                 container.innerHTML += `
                     <div class="course-progress-card">
                         <div style="text-align: center;">
@@ -450,26 +419,20 @@
                             <h4>${courseInfo.title}</h4>
                             ${courseInfo.level ? `<span class="badge badge-info">${courseInfo.level}</span>` : ''}
                         </div>
-                        
                         <div class="mt-1">
                             <small>📚 ${totalLessons} ta dars</small>
-                            ${courseInfo.description ? `<p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">${courseInfo.description}</p>` : ''}
                         </div>
-                        
                         <div class="progress mt-1">
                             <div class="progress-bar" style="width: ${progressPercent}%"></div>
                         </div>
-                        
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
                             <small>${progressPercent}% yakunlangan</small>
                             <small>${completedLessons}/${totalLessons}</small>
                         </div>
-                        
                         <div class="mt-1">
                             ${progressPercent === 100 ? 
                                 `<span class="badge badge-success" style="display: block; text-align: center;">✅ Yakunlangan</span>` :
-                                `<button class="btn btn-primary" style="width: 100%;" 
-                                        onclick="continueCourse('${courseId}')">
+                                `<button class="btn btn-primary" style="width: 100%;" onclick="continueCourse('${courseId}')">
                                     ${progressPercent > 0 ? '▶️ Davom ettirish' : '🎓 Boshlash'}
                                 </button>`
                             }
@@ -478,68 +441,42 @@
                 `;
                 
             } catch (error) {
-                console.error(`${courseId} kursini yuklashda xatolik:`, error);
+                console.error('Kurs kartochkasi xatolik:', error);
             }
         }
         
-        // Progress hisoblash
         async function calculateProgress(courseId, defaultTotal) {
             let completedLessons = 0;
             let totalLessons = defaultTotal || 0;
             
             try {
-                // Realtime Database'dan progress
-                const progressSnapshot = await rtdb.ref(
-                    `users/${currentUser.uid}/progress/${courseId}`
-                ).once('value');
-                const progress = progressSnapshot.val();
+                const progressSnap = await rtdb.ref(`users/${currentUser.uid}/progress/${courseId}`).once('value');
+                const progress = progressSnap.val();
                 
                 if (progress) {
-                    if (progress.completedLessons) {
-                        completedLessons = progress.completedLessons;
-                    }
-                    if (progress.totalLessons && progress.totalLessons > totalLessons) {
-                        totalLessons = progress.totalLessons;
-                    }
+                    if (progress.completedLessons) completedLessons = progress.completedLessons;
+                    if (progress.totalLessons && progress.totalLessons > totalLessons) totalLessons = progress.totalLessons;
                 }
                 
-                // Firestore'dan yakunlangan darsliklar
                 const userDoc = await db.collection('users').doc(currentUser.uid).get();
                 if (userDoc.exists) {
-                    const userData = userDoc.data();
-                    const completedData = userData.completedLessons;
-                    
+                    const completedData = userDoc.data().completedLessons;
                     if (completedData && completedData[courseId]) {
-                        const completedCount = completedData[courseId].length;
-                        if (completedCount > completedLessons) {
-                            completedLessons = completedCount;
-                        }
+                        const count = completedData[courseId].length;
+                        if (count > completedLessons) completedLessons = count;
                     }
                 }
                 
-                // Agar Firestore'da videolar soni ko'proq bo'lsa
-                if (totalLessons === 0) {
-                    const videosCount = await db.collection('videos')
-                        .where('courseId', '==', courseId)
-                        .get()
-                        .then(snap => snap.size);
-                    
-                    if (videosCount > 0) totalLessons = videosCount;
-                }
+                if (totalLessons === 0) totalLessons = 1;
                 
-                if (totalLessons === 0) totalLessons = 1; // Nolga bo'linmaslik uchun
-                
-            } catch (error) {
-                console.error('Progress hisoblashda xatolik:', error);
+            } catch (e) {
                 if (totalLessons === 0) totalLessons = 1;
             }
             
             const progressPercent = Math.round((completedLessons / totalLessons) * 100);
-            
             return { completedLessons, totalLessons, progressPercent };
         }
         
-        // Bo'sh kurslar holati
         function showEmptyCourses(container) {
             document.getElementById('total-courses').textContent = '0';
             container.innerHTML = `
@@ -552,121 +489,98 @@
             `;
         }
         
-        // Statistikani yuklash
         async function loadStatistics() {
             try {
                 let totalCompleted = 0;
-                let totalLessons = 0;
                 
-                // Realtime Database'dan progress
-                const progressSnapshot = await rtdb.ref(`users/${currentUser.uid}/progress`).once('value');
-                
-                progressSnapshot.forEach((child) => {
-                    const progress = child.val();
-                    if (progress.completedLessons) {
-                        totalCompleted += progress.completedLessons;
-                    }
-                    if (progress.totalLessons) {
-                        totalLessons += progress.totalLessons;
-                    }
+                const progressSnap = await rtdb.ref(`users/${currentUser.uid}/progress`).once('value');
+                progressSnap.forEach((child) => {
+                    const p = child.val();
+                    if (p.completedLessons) totalCompleted += p.completedLessons;
                 });
                 
-                // Firestore'dan ham
                 const userDoc = await db.collection('users').doc(currentUser.uid).get();
                 if (userDoc.exists) {
-                    const userData = userDoc.data();
-                    const completedData = userData.completedLessons || {};
-                    
-                    Object.values(completedData).forEach(completedArray => {
-                        totalCompleted += completedArray.length;
+                    const completedData = userDoc.data().completedLessons || {};
+                    Object.values(completedData).forEach(arr => {
+                        totalCompleted += arr.length;
                     });
                 }
                 
                 document.getElementById('completed-lessons').textContent = totalCompleted;
                 
-                // Taxminiy soatlar (har bir dars ~30 daqiqa)
                 const hours = Math.round((totalCompleted * 0.5) * 10) / 10;
                 document.getElementById('total-hours').textContent = hours;
                 
             } catch (error) {
-                console.error('Statistikani yuklashda xatolik:', error);
+                console.error('Statistika xatolik:', error);
             }
         }
         
-        // Oxirgi ko'rilgan darsliklar
         async function loadRecentLessons() {
             const container = document.getElementById('recent-lessons');
             
             try {
-                // Realtime Database'dan oxirgi progress
-                const progressSnapshot = await rtdb.ref(`users/${currentUser.uid}/progress`).once('value');
+                const progressSnap = await rtdb.ref(`users/${currentUser.uid}/progress`).once('value');
                 const allProgress = [];
                 
-                progressSnapshot.forEach((child) => {
+                progressSnap.forEach((child) => {
                     const courseId = child.key;
                     const progress = child.val();
-                    if (progress.lastAccessed && progress.currentVideoId) {
-                        allProgress.push({
-                            courseId,
-                            videoId: progress.currentVideoId,
-                            lastAccessed: progress.lastAccessed
-                        });
+                    if (progress.lastAccessed) {
+                        allProgress.push({ courseId, ...progress });
                     }
                 });
                 
-                // Vaqt bo'yicha saralash
                 allProgress.sort((a, b) => b.lastAccessed - a.lastAccessed);
                 
                 if (allProgress.length === 0) {
                     container.innerHTML = `
                         <div class="card text-center">
                             <p style="color: var(--text-secondary);">Hozircha ko'rilgan darsliklar yo'q</p>
-                        </div>
-                    `;
+                        </div>`;
                     return;
                 }
                 
                 container.innerHTML = '';
                 
-                // Oxirgi 3 ta
                 for (const item of allProgress.slice(0, 3)) {
+                    let videoTitle = 'Darslik';
+                    let courseTitle = '';
+                    
                     try {
-                        const videoDoc = await db.collection('videos').doc(item.videoId).get();
-                        if (videoDoc.exists) {
-                            const video = videoDoc.data();
-                            const date = new Date(item.lastAccessed);
-                            
-                            container.innerHTML += `
-                                <div class="card mb-1" style="cursor: pointer;" 
-                                     onclick="continueCourse('${item.courseId}')">
-                                    <div style="display: flex; align-items: center; gap: 1rem;">
-                                        <div style="font-size: 2rem;">🎥</div>
-                                        <div style="flex: 1;">
-                                            <strong>${video.title || 'Darslik'}</strong>
-                                            <p style="font-size: 0.85rem; color: var(--text-secondary);">
-                                                ${video.courseTitle || ''}
-                                            </p>
-                                            <small>📅 ${date.toLocaleDateString('uz-UZ')} | ⏰ ${date.toLocaleTimeString('uz-UZ')}</small>
-                                        </div>
-                                        <button class="btn btn-outline" style="padding: 0.5rem 0.8rem;">
-                                            ▶️
-                                        </button>
-                                    </div>
-                                </div>
-                            `;
+                        if (item.currentVideoId) {
+                            const videoDoc = await db.collection('videos').doc(item.currentVideoId).get();
+                            if (videoDoc.exists) {
+                                const v = videoDoc.data();
+                                videoTitle = v.title || 'Darslik';
+                                courseTitle = v.courseTitle || v.categoryName || '';
+                            }
                         }
-                    } catch (error) {
-                        console.error('Darslik yuklashda xatolik:', error);
-                    }
+                    } catch (e) {}
+                    
+                    const date = new Date(item.lastAccessed);
+                    
+                    container.innerHTML += `
+                        <div class="card mb-1" style="cursor: pointer;" onclick="continueCourse('${item.courseId}')">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="font-size: 2rem;">🎥</div>
+                                <div style="flex: 1;">
+                                    <strong>${videoTitle}</strong>
+                                    ${courseTitle ? `<p style="font-size: 0.85rem; color: var(--text-secondary);">${courseTitle}</p>` : ''}
+                                    <small>📅 ${date.toLocaleDateString('uz-UZ')} | ⏰ ${date.toLocaleTimeString('uz-UZ')}</small>
+                                </div>
+                                <button class="btn btn-outline" style="padding: 0.5rem 0.8rem;">▶️</button>
+                            </div>
+                        </div>`;
                 }
                 
             } catch (error) {
-                console.error('Oxirgi darsliklarni yuklashda xatolik:', error);
+                console.error('Oxirgi darsliklar xatolik:', error);
                 container.innerHTML = '<p style="color: var(--text-secondary);">Yuklashda xatolik</p>';
             }
         }
         
-        // Yangiliklar widget'i
         async function loadNewsWidget() {
             const container = document.getElementById('news-widget');
             
@@ -681,18 +595,16 @@
                 container.innerHTML = news.map(item => `
                     <div class="mb-1" style="padding: 0.5rem; border-bottom: 1px solid var(--border-color);">
                         <strong>${item.title}</strong>
-                        <p style="font-size: 0.85rem; color: var(--text-secondary);">${item.content.substring(0, 80)}...</p>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary);">${(item.content || '').substring(0, 80)}...</p>
                         <small>${item.createdAt ? new Date(item.createdAt.toDate()).toLocaleDateString('uz-UZ') : ''}</small>
                     </div>
                 `).join('');
                 
             } catch (error) {
-                console.error('Yangiliklarni yuklashda xatolik:', error);
                 container.innerHTML = '<p style="color: var(--text-secondary);">Yuklashda xatolik</p>';
             }
         }
         
-        // Global chat
         function loadChat() {
             const chatMessages = document.getElementById('chat-messages');
             
@@ -711,12 +623,10 @@
                     </div>
                 `).join('');
                 
-                // Avtomatik scroll pastga
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             });
         }
         
-        // Chat xabarini yuborish
         async function sendChatMessage() {
             const input = document.getElementById('chat-input');
             const text = input.value.trim();
@@ -731,72 +641,68 @@
                 input.value = '';
                 input.focus();
             } catch (error) {
-                console.error('Xabar yuborishda xatolik:', error);
                 alert('❌ Xabar yuborilmadi. Iltimos qayta urinib ko\'ring.');
             }
         }
         
-        // Kursni davom ettirish
         async function continueCourse(courseId) {
+            console.log('▶️ Kurs davom ettirilmoqda:', courseId);
+            
             try {
-                // Kurs ma'lumotlarini yig'ish
                 let courseData = null;
                 
                 // Firestore'dan videolarni izlash
-                const videosSnapshot = await db.collection('videos')
+                let snapshot = await db.collection('videos')
                     .where('courseId', '==', courseId)
                     .get();
                 
-                if (!videosSnapshot.empty) {
-                    const firstVideo = videosSnapshot.docs[0].data();
+                if (!snapshot.empty) {
+                    const firstVideo = snapshot.docs[0].data();
                     courseData = {
-                        id: courseId,
                         title: firstVideo.courseTitle || 'Kurs',
                         icon: firstVideo.courseIcon || '📚',
                         description: firstVideo.courseDescription || '',
-                        lessonsCount: videosSnapshot.size,
-                        category: firstVideo.categoryId || '',
-                        level: firstVideo.level || 'Boshlang\'ich'
+                        lessonsCount: snapshot.size
                     };
                 } else {
-                    // Default kurslardan izlash
-                    courseData = defaultCourses.find(c => c.id === courseId);
-                }
-                
-                // Realtime Database'dan
-                if (!courseData) {
-                    const rtdbCourse = await rtdb.ref(`users/${currentUser.uid}/courses/${courseId}`).once('value');
-                    const rtdbData = rtdbCourse.val();
-                    if (rtdbData) {
+                    snapshot = await db.collection('videos')
+                        .where('categoryId', '==', courseId)
+                        .get();
+                    
+                    if (!snapshot.empty) {
+                        const firstVideo = snapshot.docs[0].data();
                         courseData = {
-                            id: courseId,
-                            title: rtdbData.title || 'Kurs',
-                            icon: '📚',
-                            description: '',
-                            lessonsCount: rtdbData.totalLessons || 0
+                            title: firstVideo.courseTitle || firstVideo.categoryName || 'Kurs',
+                            icon: firstVideo.courseIcon || '📚',
+                            description: firstVideo.courseDescription || '',
+                            lessonsCount: snapshot.size
                         };
+                    } else {
+                        const defaultCourse = defaultCourses.find(c => c.id === courseId);
+                        if (defaultCourse) {
+                            courseData = {
+                                title: defaultCourse.title,
+                                icon: defaultCourse.icon,
+                                description: defaultCourse.description,
+                                lessonsCount: defaultCourse.lessonsCount
+                            };
+                        }
                     }
                 }
                 
-                if (courseData) {
-                    // Video player'ni ochish
-                    if (typeof videoPlayer !== 'undefined') {
-                        videoPlayer.openCourse(courseId, courseData);
-                    } else {
-                        // Agar video player yuklanmagan bo'lsa
-                        window.location.href = `courses.html?course=${courseId}`;
-                    }
+                if (courseData && typeof videoPlayer !== 'undefined') {
+                    videoPlayer.openCourse(courseId, courseData);
                 } else {
-                    alert('Kurs ma\'lumotlari topilmadi');
+                    window.location.href = 'courses.html';
                 }
                 
             } catch (error) {
                 console.error('Kursni davom ettirishda xatolik:', error);
-                alert('❌ Xatolik yuz berdi. Iltimos qayta urinib ko\'ring.');
+                window.location.href = 'courses.html';
             }
         }
         
-        // Enter tugmasi bilan chat xabarini yuborish
+        // Enter bilan chat
         document.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && document.activeElement === document.getElementById('chat-input')) {
                 e.preventDefault();
@@ -808,10 +714,8 @@
         document.getElementById('logout-btn').addEventListener('click', async (e) => {
             e.preventDefault();
             if (confirm('Haqiqatan ham chiqmoqchimisiz?')) {
-                const result = await logoutUser();
-                if (result.success) {
-                    window.location.href = 'index.html';
-                }
+                await logoutUser();
+                window.location.href = 'index.html';
             }
         });
         
@@ -828,9 +732,7 @@
         
         // Har 30 soniyada statistikani yangilash
         setInterval(() => {
-            if (currentUser) {
-                loadStatistics();
-            }
+            if (currentUser) loadStatistics();
         }, 30000);
     </script>
 </body>
