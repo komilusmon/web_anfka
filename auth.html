@@ -172,4 +172,97 @@
         function showMessage(message, type) {
             const messageDiv = document.getElementById('message');
             messageDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
-           
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+        
+        // Loading ko'rsatish
+        function showLoading(button) {
+            button.disabled = true;
+            button.textContent = 'Kuting...';
+        }
+        
+        function hideLoading(button, originalText) {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+        
+        // Login formasi
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const button = e.target.querySelector('button');
+            
+            showLoading(button);
+            
+            const result = await loginUser(email, password);
+            
+            if (result.success) {
+                showMessage(result.message, 'success');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+            } else {
+                showMessage(result.message, 'danger');
+                hideLoading(button, 'Kirish');
+            }
+        });
+        
+        // Register formasi
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const button = e.target.querySelector('button');
+            
+            if (password.length < 6) {
+                showMessage('Parol kamida 6 ta belgidan iborat bo\'lishi kerak', 'danger');
+                return;
+            }
+            
+            showLoading(button);
+            
+            const result = await registerUser(email, password, fullName);
+            
+            if (result.success) {
+                showMessage(result.message, 'success');
+                // Firestore-ga saqlash
+                setTimeout(() => {
+                    switchTab('login');
+                }, 2000);
+            } else {
+                showMessage(result.message, 'danger');
+                hideLoading(button, 'Ro\'yxatdan o\'tish');
+            }
+        });
+        
+        // Parolni tiklash formasi
+        document.getElementById('reset-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('reset-email').value;
+            const button = e.target.querySelector('button');
+            
+            showLoading(button);
+            
+            const result = await resetPassword(email);
+            
+            if (result.success) {
+                showMessage(result.message, 'success');
+                setTimeout(() => {
+                    switchTab('login');
+                }, 2000);
+            } else {
+                showMessage(result.message, 'danger');
+            }
+            
+            hideLoading(button, 'Tiklash havolasini yuborish');
+        });
+    </script>
+</body>
+</html>
