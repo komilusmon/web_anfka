@@ -4,18 +4,18 @@
     console.log('✅ EmailJS tayyor');
 })();
 
-// EmailJS sozlamalari - BU YERGA O'Z TEMPLATE ID'LARINGIZNI KIRITING
+// EmailJS sozlamalari - O'Z TEMPLATE ID'LARINGIZNI KIRITING
 const EMAILJS_CONFIG = {
-    serviceId: 'YOUR_SERVICE_ID', // Email xizmati ID'si (Gmail, Outlook va hokazo)
+    serviceId: 'service_default', // O'z xizmat ID'ingiz
     templates: {
-        feedback: 'YOUR_FEEDBACK_TEMPLATE_ID', // Fikr-mulohaza shabloni ID'si
-        welcome: 'YOUR_WELCOME_TEMPLATE_ID', // Xush kelibsiz shabloni ID'si
-        courseNotification: 'YOUR_COURSE_TEMPLATE_ID' // Kurs xabarnomasi ID'si (ixtiyoriy)
+        feedback: 'template_feedback', // O'z template ID'ingiz
+        welcome: 'template_welcome', // O'z template ID'ingiz
+        courseNotification: 'template_course' // O'z template ID'ingiz
     }
 };
 
-// Fikr-mulohaza yuborish funksiyasi
-async function sendFeedback(userEmail, userName, message, subject = '') {
+// Fikr-mulohaza yuborish
+async function sendFeedback(userEmail, userName, message, subject) {
     try {
         const templateParams = {
             from_name: userName,
@@ -41,7 +41,7 @@ async function sendFeedback(userEmail, userName, message, subject = '') {
     }
 }
 
-// Ro'yxatdan o'tish xabarini yuborish
+// Xush kelibsiz email yuborish
 async function sendWelcomeEmail(userEmail, userName) {
     try {
         const templateParams = {
@@ -64,32 +64,6 @@ async function sendWelcomeEmail(userEmail, userName) {
         return true;
     } catch (error) {
         console.error('❌ Xush kelibsiz xati yuborilmadi:', error);
-        return false;
-    }
-}
-
-// Kursga yozilish xabarini yuborish
-async function sendCourseEnrollmentEmail(userEmail, userName, courseName) {
-    try {
-        const templateParams = {
-            to_email: userEmail,
-            to_name: userName,
-            course_name: courseName,
-            from_name: 'ANFKA Academy',
-            subject: `Siz ${courseName} kursiga yozildingiz! 🎉`,
-            course_link: window.location.origin + '/dashboard.html'
-        };
-
-        const response = await emailjs.send(
-            EMAILJS_CONFIG.serviceId,
-            EMAILJS_CONFIG.templates.courseNotification,
-            templateParams
-        );
-
-        console.log('✅ Kurs xabarnomasi yuborildi');
-        return true;
-    } catch (error) {
-        console.error('❌ Kurs xabarnomasi yuborilmadi:', error);
         return false;
     }
 }
