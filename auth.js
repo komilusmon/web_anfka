@@ -13,14 +13,30 @@ async function registerUser(email, password, fullName) {
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             lastLogin: firebase.firestore.FieldValue.serverTimestamp(),
             courses: [],
+            progress: {},
+            role: 'student'
+        });
+
+        // Realtime Database-ga ham saqlash
+        await rtdb.ref('users/' + user.uid).set({
+            fullName: fullName,
+            email: email,
+            username: email.split('@')[0], // Emaildan username yasash
+            createdAt: Date.now(),
+            lastLogin: Date.now(),
+            courses: {},
             progress: {}
         });
 
         // Email tasdiqlash yuborish
         await user.sendEmailVerification();
 
-        // Xush kelibsiz email yuborish
-        await sendWelcomeEmail(email, fullName);
+        // Xush kelibsiz email yuborish (EmailJS orqali)
+        try {
+            await sendWelcomeEmail(email, fullName);
+        } catch (emailError) {
+            console.log('⚠️ Email yuborilmadi, lekin ro\'yxatdan o\'tish muvaffaqiyatli');
+        }
 
         return { 
             success: true, 
@@ -58,9 +74,15 @@ async function loginUser(email, password) {
             };
         }
 
-        // Oxirgi login vaqtini yangilash
+        // Oxirgi login vaqtini yangilash (ikkala bazada)
+        const now = firebase.firestore.FieldValue.serverTimestamp();
+        
         await db.collection('users').doc(user.uid).update({
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            lastLogin: now
+        });
+
+        await rtdb.ref('users/' + user.uid).update({
+            lastLogin: Date.now()
         });
 
         return { 
