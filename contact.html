@@ -22,25 +22,28 @@
     <div class="container">
         <div class="card" style="max-width: 600px; margin: 0 auto;">
             <h2 class="text-center mb-2">📝 Biz bilan bog'lanish</h2>
+            <p class="text-center mb-2" style="color: var(--text-secondary);">
+                Savolingiz yoki taklifingiz bo'lsa, bizga yozing. Tez orada javob beramiz!
+            </p>
             
             <!-- Xabar maydoni -->
             <div id="message"></div>
             
             <form id="feedback-form">
                 <div class="form-group">
-                    <label class="form-label">Ismingiz</label>
+                    <label class="form-label">👤 Ismingiz</label>
                     <input type="text" id="name" class="form-control" 
                            placeholder="Ismingizni kiriting" required>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Email manzilingiz</label>
+                    <label class="form-label">📧 Email manzilingiz</label>
                     <input type="email" id="email" class="form-control" 
                            placeholder="Email manzilingizni kiriting" required>
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Mavzu</label>
+                    <label class="form-label">📌 Mavzu</label>
                     <select id="subject" class="form-control">
                         <option value="Umumiy savol">Umumiy savol</option>
                         <option value="Kurs haqida">Kurs haqida</option>
@@ -51,7 +54,7 @@
                 </div>
                 
                 <div class="form-group">
-                    <label class="form-label">Xabaringiz</label>
+                    <label class="form-label">💬 Xabaringiz</label>
                     <textarea id="message-text" class="form-control" rows="5" 
                               placeholder="Xabaringizni yozing..." required></textarea>
                 </div>
@@ -65,15 +68,18 @@
         <!-- Aloqa ma'lumotlari -->
         <div class="grid mt-3">
             <div class="card text-center">
-                <h3>📧 Email</h3>
+                <div style="font-size: 2rem;">📧</div>
+                <h3>Email</h3>
                 <p>info@anfka-academy.uz</p>
             </div>
             <div class="card text-center">
-                <h3>📱 Telefon</h3>
+                <div style="font-size: 2rem;">📱</div>
+                <h3>Telefon</h3>
                 <p>+998 90 123 45 67</p>
             </div>
             <div class="card text-center">
-                <h3>📍 Manzil</h3>
+                <div style="font-size: 2rem;">📍</div>
+                <h3>Manzil</h3>
                 <p>Toshkent sh., O'zbekiston</p>
             </div>
         </div>
@@ -88,6 +94,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
     
     <!-- EmailJS -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
@@ -98,28 +105,45 @@
     <!-- Custom JavaScript -->
     <script src="firebase-config.js"></script>
     <script src="emailjs-config.js"></script>
+    <script src="database-manager.js"></script>
     <script src="ads.js"></script>
     
     <script>
+        // Avtomatik to'ldirish (agar foydalanuvchi login qilgan bo'lsa)
+        async function autoFillUserData() {
+            const user = auth.currentUser;
+            if (user) {
+                document.getElementById('email').value = user.email;
+                
+                try {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        document.getElementById('name').value = userDoc.data().fullName || '';
+                    }
+                } catch (error) {}
+            }
+        }
+        
         // Xabar yuborish
         document.getElementById('feedback-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const name = document.getElementById('name').value;
-            const email = document.getElementById('email').value;
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
             const subject = document.getElementById('subject').value;
-            const messageText = document.getElementById('message-text').value;
-            const button = e.target.querySelector('button');
+            const messageText = document.getElementById('message-text').value.trim();
+            const button = e.target.querySelector('button[type="submit"]');
             
             // Loading
+            const originalHTML = button.innerHTML;
             button.disabled = true;
-            button.textContent = 'Yuborilmoqda...';
+            button.innerHTML = '<span class="spinner" style="width:20px;height:20px;"></span> Yuborilmoqda...';
             
             try {
-                // EmailJS orqali yuborish
-                const result = await sendFeedback(email, name, messageText, subject);
+                // 1. EmailJS orqali email yuborish
+                const emailResult = await sendFeedback(email, name, messageText, subject);
                 
-                // Firestore-ga ham saqlash
+                // 2. Firestore-ga saqlash
                 await db.collection('feedbacks').add({
                     name: name,
                     email: email,
@@ -129,35 +153,29 @@
                     status: 'yangi'
                 });
                 
-                // Muvaffaqiyatli xabar
-                const messageDiv = document.getElementById('message');
-                messageDiv.innerHTML = `
-                    <div class="alert alert-success">
-                        ✅ Xabaringiz muvaffaqiyatli yuborildi! Tez orada javob beramiz.
-                    </div>
-                `;
+                // 3. Muvaffaqiyatli xabar
+                showMessage('✅ Xabaringiz muvaffaqiyatli yuborildi! Tez orada javob beramiz.', 'success');
                 
                 // Formani tozalash
                 document.getElementById('feedback-form').reset();
-                
-                // Xabarni o'chirish
-                setTimeout(() => {
-                    messageDiv.innerHTML = '';
-                }, 5000);
+                autoFillUserData(); // Qayta avtoto'ldirish
                 
             } catch (error) {
                 console.error('Xatolik:', error);
-                const messageDiv = document.getElementById('message');
-                messageDiv.innerHTML = `
-                    <div class="alert alert-danger">
-                        ❌ Xatolik yuz berdi. Iltimos qayta urinib ko'ring.
-                    </div>
-                `;
+                showMessage('❌ Xatolik yuz berdi. Iltimos qayta urinib ko\'ring.', 'danger');
             } finally {
                 button.disabled = false;
-                button.textContent = '📤 Xabarni Yuborish';
+                button.innerHTML = originalHTML;
             }
         });
+        
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
         
         // Foydalanuvchi holatini tekshirish
         auth.onAuthStateChanged((user) => {
@@ -165,10 +183,16 @@
             if (user) {
                 authLink.textContent = 'Kabinet';
                 authLink.href = 'dashboard.html';
+                autoFillUserData();
             } else {
                 authLink.textContent = 'Kirish';
                 authLink.href = 'auth.html';
             }
+        });
+        
+        // Sahifa yuklanganda
+        document.addEventListener('DOMContentLoaded', () => {
+            autoFillUserData();
         });
     </script>
 </body>
