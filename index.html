@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-adsense-account" content="ca-pub-7357410271113724">
+    <title>ANFKA Academy - Bepul Onlayn Darslar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">🎓 ANFKA Academy</a>
+        <ul class="navbar-nav">
+            <li><a href="index.html" class="nav-link active">Asosiy</a></li>
+            <li><a href="courses.html" class="nav-link">Kurslar</a></li>
+            <li><a href="contact.html" class="nav-link">Aloqa</a></li>
+            <li><a href="auth.html" class="nav-link" id="auth-link">Kirish</a></li>
+        </ul>
+    </nav>
+
+    <!-- Asosiy kontent -->
+    <div class="container">
+        <!-- Hero bo'limi -->
+        <section class="hero">
+            <h1>🚀 Bepul Onlayn Darslarga Xush Kelibsiz!</h1>
+            <p>Dasturlash, dizayn, marketing va boshqa ko'plab sohalar bo'yicha bepul kurslar</p>
+            <a href="courses.html" class="btn btn-outline" style="color: white; border-color: white;">
+                Kurslarni Ko'rish
+            </a>
+        </section>
+
+        <!-- Reklama bo'limi (Header) -->
+        <div id="header-ad" class="ad-container"></div>
+
+        <!-- Statistika -->
+        <section class="stats">
+            <div class="stat-card">
+                <div class="stat-number">50+</div>
+                <div class="stat-label">Bepul Kurslar</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">10,000+</div>
+                <div class="stat-label">O'quvchilar</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">4.8/5</div>
+                <div class="stat-label">Reyting</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Qo'llab-quvvatlash</div>
+            </div>
+        </section>
+
+        <!-- Mashhur kurslar -->
+        <section>
+            <h2 class="mb-2">🔥 Mashhur Kurslar</h2>
+            <div class="grid" id="popular-courses">
+                <!-- Kurslar JavaScript orqali yuklanadi -->
+            </div>
+        </section>
+
+        <!-- Reklama bo'limi (Content) -->
+        <div id="content-ad" class="ad-container"></div>
+
+        <!-- Nima uchun biz? -->
+        <section class="mt-3">
+            <h2 class="text-center mb-2">Nima Uchun ANFKA Academy?</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>📚 To'liq Bepul</h3>
+                    <p>Barcha kurslarimiz mutlaqo bepul. Hech qanday yashirin to'lovlarsiz o'rganing.</p>
+                </div>
+                <div class="card">
+                    <h3>🎯 Amaliy Yondashuv</h3>
+                    <p>Nazariyadan ko'ra amaliyotga ko'proq e'tibor qaratamiz. Real loyihalar bilan ishlaysiz.</p>
+                </div>
+                <div class="card">
+                    <h3>👨‍🏫 Tajribali Mentorlar</h3>
+                    <p>Soha mutaxassislari tomonidan tayyorlangan sifatli kontent va qo'llab-quvvatlash.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Reklama bo'limi (Footer) -->
+    <div id="footer-ad" class="ad-container"></div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 ANFKA Academy. Barcha huquqlar himoyalangan.</p>
+        <p class="mt-1">
+            <a href="contact.html">Aloqa</a> | 
+            <a href="#">Maxfiylik Siyosati</a> | 
+            <a href="#">Foydalanish Shartlari</a>
+        </p>
+    </footer>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <!-- EmailJS -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7357410271113724" crossorigin="anonymous"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="firebase-config.js"></script>
+    <script src="emailjs-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="ads.js"></script>
+    
+    <script>
+        // Mashhur kurslarni yuklash
+        async function loadPopularCourses() {
+            try {
+                const coursesSnapshot = await db.collection('courses')
+                    .orderBy('enrolled', 'desc')
+                    .limit(3)
+                    .get();
+                
+                const coursesContainer = document.getElementById('popular-courses');
+                
+                if (coursesSnapshot.empty) {
+                    // Agar kurslar bo'lmasa, namunaviy kurslarni ko'rsatish
+                    const sampleCourses = [
+                        {
+                            title: 'Web Dasturlash Asoslari',
+                            description: 'HTML, CSS va JavaScript asoslarini o\'rganing',
+                            lessons: 24,
+                            icon: '🌐'
+                        },
+                        {
+                            title: 'Python Dasturlash',
+                            description: 'Python tilida dasturlashni noldan boshlab o\'rganing',
+                            lessons: 30,
+                            icon: '🐍'
+                        },
+                        {
+                            title: 'Grafik Dizayn',
+                            description: 'Photoshop va Illustrator dasturlarini o\'rganing',
+                            lessons: 18,
+                            icon: '🎨'
+                        }
+                    ];
+                    
+                    sampleCourses.forEach(course => {
+                        coursesContainer.innerHTML += createCourseCard(course);
+                    });
+                } else {
+                    coursesContainer.innerHTML = '';
+                    coursesSnapshot.forEach(doc => {
+                        const course = doc.data();
+                        coursesContainer.innerHTML += createCourseCard(course);
+                    });
+                }
+            } catch (error) {
+                console.error('Kurslarni yuklashda xatolik:', error);
+            }
+        }
+        
+        function createCourseCard(course) {
+            return `
+                <div class="course-card">
+                    <div class="course-header">
+                        <div style="font-size: 3rem;">${course.icon || '📚'}</div>
+                        <h3>${course.title}</h3>
+                    </div>
+                    <div class="course-body">
+                        <p>${course.description}</p>
+                        <div class="mt-1">
+                            <small>📚 ${course.lessons} ta dars</small>
+                        </div>
+                    </div>
+                    <div class="course-footer">
+                        <a href="courses.html" class="btn btn-primary">Boshlash</a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Foydalanuvchi holatini tekshirish
+        auth.onAuthStateChanged((user) => {
+            const authLink = document.getElementById('auth-link');
+            if (user) {
+                authLink.textContent = 'Kabinet';
+                authLink.href = 'dashboard.html';
+            } else {
+                authLink.textContent = 'Kirish';
+                authLink.href = 'auth.html';
+            }
+        });
+        
+        // Sahifa yuklanganda
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPopularCourses();
+        });
+    </script>
+</body>
+</html>
