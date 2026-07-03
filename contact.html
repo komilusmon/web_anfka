@@ -3,45 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="google-adsense-account" content="ca-pub-7357410271113724">
     <title>ANFKA Academy - Aloqa</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Navbar -->
     <nav class="navbar">
         <a href="index.html" class="navbar-brand">🎓 ANFKA Academy</a>
         <ul class="navbar-nav">
             <li><a href="index.html" class="nav-link">Asosiy</a></li>
             <li><a href="courses.html" class="nav-link">Kurslar</a></li>
             <li><a href="contact.html" class="nav-link active">Aloqa</a></li>
-            <li><a href="auth.html" class="nav-link" id="auth-link">Kirish</a></li>
+            <li><a href="auth.html" class="nav-link btn-auth" id="auth-link">Kirish</a></li>
         </ul>
     </nav>
 
     <div class="container">
-        <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <div class="card" style="max-width:600px;margin:0 auto;">
             <h2 class="text-center mb-2">📝 Biz bilan bog'lanish</h2>
-            <p class="text-center mb-2" style="color: var(--text-secondary);">
-                Savolingiz yoki taklifingiz bo'lsa, bizga yozing. Tez orada javob beramiz!
-            </p>
-            
-            <!-- Xabar maydoni -->
             <div id="message"></div>
-            
             <form id="feedback-form">
                 <div class="form-group">
                     <label class="form-label">👤 Ismingiz</label>
-                    <input type="text" id="name" class="form-control" 
-                           placeholder="Ismingizni kiriting" required>
+                    <input type="text" id="name" class="form-control" placeholder="Ismingizni kiriting" required>
                 </div>
-                
                 <div class="form-group">
-                    <label class="form-label">📧 Email manzilingiz</label>
-                    <input type="email" id="email" class="form-control" 
-                           placeholder="Email manzilingizni kiriting" required>
+                    <label class="form-label">📧 Email</label>
+                    <input type="email" id="email" class="form-control" placeholder="Email manzilingiz" required>
                 </div>
-                
                 <div class="form-group">
                     <label class="form-label">📌 Mavzu</label>
                     <select id="subject" class="form-control">
@@ -49,150 +37,80 @@
                         <option value="Kurs haqida">Kurs haqida</option>
                         <option value="Texnik muammo">Texnik muammo</option>
                         <option value="Taklif">Taklif</option>
-                        <option value="Shikoyat">Shikoyat</option>
                     </select>
                 </div>
-                
                 <div class="form-group">
                     <label class="form-label">💬 Xabaringiz</label>
-                    <textarea id="message-text" class="form-control" rows="5" 
-                              placeholder="Xabaringizni yozing..." required></textarea>
+                    <textarea id="message-text" class="form-control" rows="5" placeholder="Xabaringizni yozing..." required></textarea>
                 </div>
-                
-                <button type="submit" class="btn btn-primary" style="width: 100%;">
-                    📤 Xabarni Yuborish
-                </button>
+                <button type="submit" class="btn btn-primary" style="width:100%;">📤 Yuborish</button>
             </form>
         </div>
 
-        <!-- Aloqa ma'lumotlari -->
         <div class="grid mt-3">
-            <div class="card text-center">
-                <div style="font-size: 2rem;">📧</div>
-                <h3>Email</h3>
-                <p>info@anfka-academy.uz</p>
-            </div>
-            <div class="card text-center">
-                <div style="font-size: 2rem;">📱</div>
-                <h3>Telefon</h3>
-                <p>+998 90 123 45 67</p>
-            </div>
-            <div class="card text-center">
-                <div style="font-size: 2rem;">📍</div>
-                <h3>Manzil</h3>
-                <p>Toshkent sh., O'zbekiston</p>
-            </div>
+            <div class="card text-center"><div style="font-size:2rem;">📧</div><h3>Email</h3><p>info@anfka-academy.uz</p></div>
+            <div class="card text-center"><div style="font-size:2rem;">📱</div><h3>Telefon</h3><p>+998 90 123 45 67</p></div>
+            <div class="card text-center"><div style="font-size:2rem;">📍</div><h3>Manzil</h3><p>Toshkent sh., O'zbekiston</p></div>
         </div>
     </div>
 
-    <!-- Footer -->
     <footer class="footer">
         <p>&copy; 2024 ANFKA Academy. Barcha huquqlar himoyalangan.</p>
     </footer>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
-    
-    <!-- EmailJS -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    
-    <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7357410271113724" crossorigin="anonymous"></script>
     
-    <!-- Custom JavaScript -->
     <script src="firebase-config.js"></script>
     <script src="emailjs-config.js"></script>
     <script src="database-manager.js"></script>
     <script src="ads.js"></script>
-    
+
     <script>
-        // Avtomatik to'ldirish (agar foydalanuvchi login qilgan bo'lsa)
-        async function autoFillUserData() {
-            const user = auth.currentUser;
-            if (user) {
-                document.getElementById('email').value = user.email;
-                
-                try {
-                    const userDoc = await db.collection('users').doc(user.uid).get();
-                    if (userDoc.exists) {
-                        document.getElementById('name').value = userDoc.data().fullName || '';
-                    }
-                } catch (error) {}
-            }
-        }
-        
-        // Xabar yuborish
         document.getElementById('feedback-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            
             const name = document.getElementById('name').value.trim();
             const email = document.getElementById('email').value.trim();
             const subject = document.getElementById('subject').value;
             const messageText = document.getElementById('message-text').value.trim();
-            const button = e.target.querySelector('button[type="submit"]');
+            const btn = e.target.querySelector('button');
+            const orig = btn.innerHTML;
             
-            // Loading
-            const originalHTML = button.innerHTML;
-            button.disabled = true;
-            button.innerHTML = '<span class="spinner" style="width:20px;height:20px;"></span> Yuborilmoqda...';
+            btn.disabled = true;
+            btn.innerHTML = 'Yuborilmoqda...';
             
             try {
-                // 1. EmailJS orqali email yuborish
-                const emailResult = await sendFeedback(email, name, messageText, subject);
-                
-                // 2. Firestore-ga saqlash
+                await sendFeedback(email, name, messageText, subject);
                 await db.collection('feedbacks').add({
-                    name: name,
-                    email: email,
-                    subject: subject,
-                    message: messageText,
+                    name, email, subject, message: messageText,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     status: 'yangi'
                 });
                 
-                // 3. Muvaffaqiyatli xabar
-                showMessage('✅ Xabaringiz muvaffaqiyatli yuborildi! Tez orada javob beramiz.', 'success');
-                
-                // Formani tozalash
+                document.getElementById('message').innerHTML = '<div class="alert alert-success">✅ Xabaringiz yuborildi!</div>';
                 document.getElementById('feedback-form').reset();
-                autoFillUserData(); // Qayta avtoto'ldirish
-                
+                setTimeout(() => document.getElementById('message').innerHTML = '', 5000);
             } catch (error) {
-                console.error('Xatolik:', error);
-                showMessage('❌ Xatolik yuz berdi. Iltimos qayta urinib ko\'ring.', 'danger');
-            } finally {
-                button.disabled = false;
-                button.innerHTML = originalHTML;
+                document.getElementById('message').innerHTML = '<div class="alert alert-danger">❌ Xatolik yuz berdi</div>';
             }
+            btn.disabled = false;
+            btn.innerHTML = orig;
         });
-        
-        function showMessage(text, type) {
-            const messageDiv = document.getElementById('message');
-            messageDiv.innerHTML = `<div class="alert alert-${type}">${text}</div>`;
-            setTimeout(() => {
-                messageDiv.innerHTML = '';
-            }, 5000);
-        }
-        
-        // Foydalanuvchi holatini tekshirish
-        auth.onAuthStateChanged((user) => {
-            const authLink = document.getElementById('auth-link');
+
+        auth.onAuthStateChanged(user => {
+            const link = document.getElementById('auth-link');
             if (user) {
-                authLink.textContent = 'Kabinet';
-                authLink.href = 'dashboard.html';
-                autoFillUserData();
+                link.textContent = 'Kabinet';
+                link.href = 'dashboard.html';
+                document.getElementById('email').value = user.email;
             } else {
-                authLink.textContent = 'Kirish';
-                authLink.href = 'auth.html';
+                link.textContent = 'Kirish';
+                link.href = 'auth.html';
             }
-        });
-        
-        // Sahifa yuklanganda
-        document.addEventListener('DOMContentLoaded', () => {
-            autoFillUserData();
         });
     </script>
 </body>
