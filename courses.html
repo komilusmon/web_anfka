@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-adsense-account" content="ca-pub-7357410271113724">
+    <title>ANFKA Academy - Bepul Kurslar</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">🎓 ANFKA Academy</a>
+        <ul class="navbar-nav">
+            <li><a href="index.html" class="nav-link">Asosiy</a></li>
+            <li><a href="courses.html" class="nav-link active">Kurslar</a></li>
+            <li><a href="contact.html" class="nav-link">Aloqa</a></li>
+            <li><a href="auth.html" class="nav-link" id="auth-link">Kirish</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h1 class="text-center mb-3">📚 Barcha Bepul Kurslar</h1>
+        
+        <!-- Qidiruv va Filtr -->
+        <div class="card mb-3">
+            <div class="flex gap-1 align-center">
+                <input type="text" id="search-input" class="form-control" 
+                       placeholder="Kurs qidirish..." style="flex: 1;">
+                <select id="category-filter" class="form-control" style="width: 200px;">
+                    <option value="">Barcha kategoriyalar</option>
+                    <option value="programming">Dasturlash</option>
+                    <option value="design">Dizayn</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="business">Biznes</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Reklama -->
+        <div id="header-ad" class="ad-container"></div>
+
+        <!-- Kurslar grid -->
+        <div class="grid" id="courses-grid">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 ANFKA Academy. Barcha huquqlar himoyalangan.</p>
+    </footer>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7357410271113724" crossorigin="anonymous"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="firebase-config.js"></script>
+    <script src="ads.js"></script>
+    
+    <script>
+        let allCourses = [];
+        
+        // Namunaviy kurslar (Firebase-dan yuklanmaganda)
+        const defaultCourses = [
+            {
+                id: 'web-dev',
+                title: 'Web Dasturlash',
+                description: 'HTML, CSS va JavaScript asoslari',
+                category: 'programming',
+                lessons: 24,
+                icon: '🌐',
+                duration: '12 hafta',
+                level: 'Boshlang\'ich'
+            },
+            {
+                id: 'python',
+                title: 'Python Dasturlash',
+                description: 'Python tilida dasturlash asoslari',
+                category: 'programming',
+                lessons: 30,
+                icon: '🐍',
+                duration: '15 hafta',
+                level: 'Boshlang\'ich'
+            },
+            {
+                id: 'graphic-design',
+                title: 'Grafik Dizayn',
+                description: 'Photoshop va Illustrator',
+                category: 'design',
+                lessons: 18,
+                icon: '🎨',
+                duration: '8 hafta',
+                level: 'O\'rta'
+            },
+            {
+                id: 'digital-marketing',
+                title: 'Raqamli Marketing',
+                description: 'SEO, SMM va kontent marketing',
+                category: 'marketing',
+                lessons: 20,
+                icon: '📈',
+                duration: '10 hafta',
+                level: 'Boshlang\'ich'
+            },
+            {
+                id: 'react-js',
+                title: 'React JS',
+                description: 'Zamonaviy frontend kutubxonasi',
+                category: 'programming',
+                lessons: 28,
+                icon: '⚛️',
+                duration: '14 hafta',
+                level: 'O\'rta'
+            },
+            {
+                id: 'ui-ux',
+                title: 'UI/UX Dizayn',
+                description: 'Foydalanuvchi interfeysi va tajribasi',
+                category: 'design',
+                lessons: 22,
+                icon: '🎯',
+                duration: '11 hafta',
+                level: 'Boshlang\'ich'
+            }
+        ];
+        
+        // Kurslarni yuklash
+        async function loadCourses() {
+            const container = document.getElementById('courses-grid');
+            
+            try {
+                const coursesSnapshot = await db.collection('courses').get();
+                
+                if (coursesSnapshot.empty) {
+                    allCourses = defaultCourses;
+                } else {
+                    allCourses = [];
+                    coursesSnapshot.forEach(doc => {
+                        allCourses.push({ id: doc.id, ...doc.data() });
+                    });
+                }
+                
+                displayCourses(allCourses);
+            } catch (error) {
+                console.error('Kurslarni yuklashda xatolik:', error);
+                allCourses = defaultCourses;
+                displayCourses(allCourses);
+            }
+        }
+        
+        // Kurslarni ko'rsatish
+        function displayCourses(courses) {
+            const container = document.getElementById('courses-grid');
+            container.innerHTML = '';
+            
+            if (courses.length === 0) {
+                container.innerHTML = '<p class="text-center">Kurslar topilmadi</p>';
+                return;
+            }
+            
+            courses.forEach(course => {
+                container.innerHTML += `
+                    <div class="course-card">
+                        <div class="course-header">
+                            <div style="font-size: 3rem;">${course.icon || '📚'}</div>
+                            <h3>${course.title}</h3>
+                            <span class="badge">${course.level || 'Boshlang\'ich'}</span>
+                        </div>
+                        <div class="course-body">
+                            <p>${course.description}</p>
+                            <div class="mt-1">
+                                <small>📚 ${course.lessons} ta dars</small>
+                                <small style="margin-left: 1rem;">⏱️ ${course.duration || '8 hafta'}</small>
+                            </div>
+                        </div>
+                        <div class="course-footer">
+                            <button class="btn btn-primary" onclick="enrollCourse('${course.id}')">
+                                Kursga Yozilish
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+        
+        // Kursga yozilish
+        async function enrollCourse(courseId) {
+            const user = auth.currentUser;
+            
+            if (!user) {
+                alert('Iltimos, avval tizimga kiring');
+                window.location.href = 'auth.html';
+                return;
+            }
+            
+            try {
+                const userRef = db.collection('users').doc(user.uid);
+                const userDoc = await userRef.get();
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    const courses = userData.courses || [];
+                    
+                    if (courses.includes(courseId)) {
+                        alert('Siz allaqachon bu kursga yozilgansiz');
+                        return;
+                    }
+                    
+                    courses.push(courseId);
+                    await userRef.update({ courses: courses });
+                    
+                    alert('✅ Kursga muvaffaqiyatli yozildingiz!');
+                    window.location.href = 'dashboard.html';
+                }
+            } catch (error) {
+                console.error('Yozilishda xatolik:', error);
+                alert('❌ Xatolik yuz berdi. Qayta urinib ko\'ring.');
+            }
+        }
+        
+        // Qidiruv va filtrlash
+        document.getElementById('search-input').addEventListener('input', filterCourses);
+        document.getElementById('category-filter').addEventListener('change', filterCourses);
+        
+        function filterCourses() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const category = document.getElementById('category-filter').value;
+            
+            let filtered = allCourses;
+            
+            if (searchTerm) {
+                filtered = filtered.filter(course => 
+                    course.title.toLowerCase().includes(searchTerm) ||
+                    course.description.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            if (category) {
+                filtered = filtered.filter(course => course.category === category);
+            }
+            
+            displayCourses(filtered);
+        }
+        
+        // Foydalanuvchi holatini tekshirish
+        auth.onAuthStateChanged((user) => {
+            const authLink = document.getElementById('auth-link');
+            if (user) {
+                authLink.textContent = 'Kabinet';
+                authLink.href = 'dashboard.html';
+            } else {
+                authLink.textContent = 'Kirish';
+                authLink.href = 'auth.html';
+            }
+        });
+        
+        // Sahifa yuklanganda
+        document.addEventListener('DOMContentLoaded', loadCourses);
+    </script>
+</body>
+</html>
