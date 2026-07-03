@@ -13,6 +13,9 @@ firebase.initializeApp(firebaseConfig);
 
 // Xizmatlarni olish
 const auth = firebase.auth();
-const db = firebase.firestore();
+const db = firebase.firestore(); // Firestore - kurslar, videolar, yangiliklar uchun
+const rtdb = firebase.database(); // Realtime Database - xabarlar va foydalanuvchilar uchun
 
 console.log('✅ Firebase muvaffaqiyatli ulandi');
+console.log('📦 Firestore:', db ? 'Ulangan' : 'Xatolik');
+console.log('🔄 Realtime DB:', rtdb ? 'Ulangan' : 'Xatolik');
