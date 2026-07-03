@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google-adsense-account" content="ca-pub-7357410271113724">
+    <title>ANFKA Academy - Kabinet</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <a href="index.html" class="navbar-brand">🎓 ANFKA Academy</a>
+        <ul class="navbar-nav">
+            <li><a href="index.html" class="nav-link">Asosiy</a></li>
+            <li><a href="courses.html" class="nav-link">Kurslar</a></li>
+            <li><a href="contact.html" class="nav-link">Aloqa</a></li>
+            <li><a href="#" class="nav-link" id="logout-btn">Chiqish</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <!-- Foydalanuvchi ma'lumotlari -->
+        <div class="card">
+            <h2 id="user-name">Xush kelibsiz!</h2>
+            <p id="user-email"></p>
+            <small id="member-since"></small>
+        </div>
+
+        <!-- Reklama -->
+        <div id="header-ad" class="ad-container"></div>
+
+        <!-- Davom etayotgan kurslar -->
+        <h2 class="mt-3 mb-2">📚 Mening Kurslarim</h2>
+        <div class="grid" id="my-courses">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Tavsiya qilinadigan kurslar -->
+        <h2 class="mt-3 mb-2">⭐ Tavsiya Qilinadigan Kurslar</h2>
+        <div class="grid" id="recommended-courses">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>&copy; 2024 ANFKA Academy. Barcha huquqlar himoyalangan.</p>
+    </footer>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-7357410271113724" crossorigin="anonymous"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="firebase-config.js"></script>
+    <script src="auth.js"></script>
+    <script src="ads.js"></script>
+    
+    <script>
+        // Foydalanuvchi ma'lumotlarini yuklash
+        async function loadUserData() {
+            const user = auth.currentUser;
+            if (!user) {
+                window.location.href = 'auth.html';
+                return;
+            }
+            
+            document.getElementById('user-email').textContent = `📧 ${user.email}`;
+            
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    document.getElementById('user-name').textContent = 
+                        `👋 Xush kelibsiz, ${userData.fullName}!`;
+                    
+                    // A'zo bo'lgan sana
+                    if (userData.createdAt) {
+                        const date = userData.createdAt.toDate();
+                        document.getElementById('member-since').textContent = 
+                            `A'zo bo'lgan sana: ${date.toLocaleDateString('uz-UZ')}`;
+                    }
+                    
+                    // Kurslarni yuklash
+                    loadMyCourses(userData.courses || []);
+                }
+            } catch (error) {
+                console.error('Ma\'lumotlarni yuklashda xatolik:', error);
+            }
+        }
+        
+        // Mening kurslarimni yuklash
+        async function loadMyCourses(courseIds) {
+            const container = document.getElementById('my-courses');
+            
+            if (courseIds.length === 0) {
+                container.innerHTML = `
+                    <div class="card text-center">
+                        <p>Hali hech qanday kursga yozilmagansiz</p>
+                        <a href="courses.html" class="btn btn-primary mt-1">Kurslarni Ko'rish</a>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            for (const courseId of courseIds) {
+                try {
+                    const courseDoc = await db.collection('courses').doc(courseId).get();
+                    if (courseDoc.exists) {
+                        const course = courseDoc.data();
+                        container.innerHTML += `
+                            <div class="course-card">
+                                <div class="course-header">
+                                    <h3>${course.title}</h3>
+                                </div>
+                                <div class="course-body">
+                                    <p>${course.description}</p>
+                                    <div class="progress mt-1">
+                                        <div class="progress-bar" style="width: 0%"></div>
+                                    </div>
+                                </div>
+                                <div class="course-footer">
+                                    <button class="btn btn-primary">Davom ettirish</button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } catch (error) {
+                    console.error('Kurs yuklashda xatolik:', error);
+                }
+            }
+        }
+        
+        // Chiqish
+        document.getElementById('logout-btn').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const result = await logoutUser();
+            if (result.success) {
+                window.location.href = 'index.html';
+            }
+        });
+        
+        // Sahifa yuklanganda
+        document.addEventListener('DOMContentLoaded', () => {
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    loadUserData();
+                } else {
+                    window.location.href = 'auth.html';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
