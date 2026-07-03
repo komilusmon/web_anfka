@@ -25,13 +25,17 @@
             padding: 1.5rem;
             border-radius: 10px;
             box-shadow: var(--shadow);
+            transition: transform 0.3s;
+        }
+        .course-progress-card:hover {
+            transform: translateY(-5px);
         }
         .global-chat {
             background: white;
             border-radius: 10px;
             box-shadow: var(--shadow);
             padding: 1.5rem;
-            max-height: 400px;
+            max-height: 500px;
             display: flex;
             flex-direction: column;
         }
@@ -39,6 +43,14 @@
             flex: 1;
             overflow-y: auto;
             margin-bottom: 1rem;
+            padding-right: 0.5rem;
+        }
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
         }
         .chat-message {
             padding: 0.5rem;
@@ -50,9 +62,42 @@
             font-weight: bold;
             color: var(--primary-color);
         }
+        .chat-message .time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            float: right;
+        }
         .chat-input-group {
             display: flex;
             gap: 0.5rem;
+        }
+        .badge {
+            display: inline-block;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        .badge-success {
+            background: #D4EDDA;
+            color: #155724;
+        }
+        .badge-warning {
+            background: #FFF3CD;
+            color: #856404;
+        }
+        .badge-info {
+            background: #D1ECF1;
+            color: #0C5460;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
         }
     </style>
 </head>
@@ -90,46 +135,69 @@
                 <div class="stat-number" id="total-hours">0</div>
                 <div class="stat-label">O'qish soatlari</div>
             </div>
+            <div class="stat-card">
+                <div class="stat-number" id="streak-days">0</div>
+                <div class="stat-label">Ketma-ket kunlar</div>
+            </div>
         </div>
 
         <!-- Reklama -->
         <div id="header-ad" class="ad-container"></div>
 
-        <div class="grid">
-            <!-- Mening kurslarim -->
-            <div style="grid-column: 1 / -1;">
-                <h2 class="mb-2">📚 Mening Kurslarim</h2>
-                <div class="grid" id="my-courses">
+        <!-- Asosiy kontent grid -->
+        <div class="grid" style="grid-template-columns: 2fr 1fr; gap: 2rem;">
+            <!-- Chap tomonda - Kurslar -->
+            <div>
+                <div class="flex justify-between align-center mb-2">
+                    <h2>📚 Mening Kurslarim</h2>
+                    <a href="courses.html" class="btn btn-outline">+ Yangi kurs</a>
+                </div>
+                <div id="my-courses">
+                    <div class="spinner"></div>
+                </div>
+
+                <!-- Oxirgi darsliklar -->
+                <h2 class="mt-3 mb-2">🎥 Oxirgi Ko'rilgan Darsliklar</h2>
+                <div id="recent-lessons">
                     <div class="spinner"></div>
                 </div>
             </div>
 
-            <!-- Global Chat -->
-            <div class="global-chat">
-                <h3>💬 Umumiy Chat</h3>
-                <div class="chat-messages" id="chat-messages">
-                    <p style="color: var(--text-secondary); text-align: center;">
-                        Xabarlar yuklanmoqda...
-                    </p>
+            <!-- O'ng tomonda - Chat va Yangiliklar -->
+            <div>
+                <!-- Global Chat -->
+                <div class="global-chat">
+                    <h3>💬 Umumiy Chat</h3>
+                    <div class="chat-messages" id="chat-messages">
+                        <p style="color: var(--text-secondary); text-align: center;">
+                            Xabarlar yuklanmoqda...
+                        </p>
+                    </div>
+                    <div class="chat-input-group">
+                        <input type="text" id="chat-input" class="form-control" 
+                               placeholder="Xabar yozing...">
+                        <button onclick="sendChatMessage()" class="btn btn-primary">📤</button>
+                    </div>
                 </div>
-                <div class="chat-input-group">
-                    <input type="text" id="chat-input" class="form-control" 
-                           placeholder="Xabar yozing..." style="flex: 1;">
-                    <button onclick="sendChatMessage()" class="btn btn-primary">📤</button>
+
+                <!-- Oxirgi yangiliklar -->
+                <div class="card mt-2">
+                    <h3>📢 Yangiliklar</h3>
+                    <div id="news-widget">
+                        <p style="color: var(--text-secondary);">Yuklanmoqda...</p>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Tavsiya qilinadigan videolar -->
-        <h2 class="mt-3 mb-2">🎥 Oxirgi Darsliklar</h2>
-        <div class="grid" id="recent-videos">
-            <div class="spinner"></div>
         </div>
     </div>
 
     <!-- Footer -->
     <footer class="footer">
         <p>&copy; 2024 ANFKA Academy. Barcha huquqlar himoyalangan.</p>
+        <p class="mt-1">
+            <a href="contact.html">Aloqa</a> | 
+            <a href="#">Maxfiylik Siyosati</a>
+        </p>
     </footer>
 
     <!-- Firebase SDK -->
@@ -146,11 +214,49 @@
     <script src="auth.js"></script>
     <script src="database-manager.js"></script>
     <script src="ads.js"></script>
+    <script src="video-player.js"></script>
     
     <script>
+        // Global o'zgaruvchilar
         let currentUser = null;
         
-        // Foydalanuvchi ma'lumotlarini yuklash
+        // Default kurslar (Firebase bo'sh bo'lganda)
+        const defaultCourses = [
+            {
+                id: 'web-dev', title: 'Web Dasturlash', icon: '🌐', lessonsCount: 24,
+                description: 'HTML, CSS va JavaScript asoslari',
+                category: 'programming', level: 'Boshlang\'ich'
+            },
+            {
+                id: 'python', title: 'Python Dasturlash', icon: '🐍', lessonsCount: 30,
+                description: 'Python dasturlash asoslari',
+                category: 'programming', level: 'Boshlang\'ich'
+            },
+            {
+                id: 'graphic-design', title: 'Grafik Dizayn', icon: '🎨', lessonsCount: 18,
+                description: 'Dizayn asoslari',
+                category: 'design', level: 'O\'rta'
+            },
+            {
+                id: 'digital-marketing', title: 'Raqamli Marketing', icon: '📈', lessonsCount: 20,
+                description: 'Marketing strategiyalari',
+                category: 'marketing', level: 'Boshlang\'ich'
+            },
+            {
+                id: 'react-js', title: 'React JS', icon: '⚛️', lessonsCount: 28,
+                description: 'Frontend kutubxonasi',
+                category: 'programming', level: 'O\'rta'
+            },
+            {
+                id: 'ui-ux', title: 'UI/UX Dizayn', icon: '🎯', lessonsCount: 22,
+                description: 'Interfeys dizayni',
+                category: 'design', level: 'Boshlang\'ich'
+            }
+        ];
+        
+        // ============ ASOSIY FUNKSIYALAR ============
+        
+        // Dashboard'ni to'liq yuklash
         async function loadDashboard() {
             currentUser = auth.currentUser;
             if (!currentUser) {
@@ -158,152 +264,431 @@
                 return;
             }
             
+            // Asosiy ma'lumotlarni yuklash
+            await loadUserInfo();
+            
+            // Kurslarni yuklash
+            await loadMyCourses();
+            
+            // Statistikani yuklash
+            await loadStatistics();
+            
+            // Oxirgi darsliklarni yuklash
+            await loadRecentLessons();
+            
+            // Yangiliklarni yuklash
+            await loadNewsWidget();
+            
+            // Chatni yuklash
+            loadChat();
+            
+            console.log('✅ Dashboard to\'liq yuklandi');
+        }
+        
+        // Foydalanuvchi ma'lumotlarini yuklash
+        async function loadUserInfo() {
             document.getElementById('user-email-display').textContent = `📧 ${currentUser.email}`;
             
             try {
-                // Firestore'dan ma'lumotlarni olish
                 const userDoc = await db.collection('users').doc(currentUser.uid).get();
                 
                 if (userDoc.exists) {
                     const userData = userDoc.data();
-                    document.getElementById('user-greeting').textContent = 
-                        `👋 Xush kelibsiz, ${userData.fullName}!`;
                     
+                    // Salomlashish
+                    const greeting = getGreeting();
+                    document.getElementById('user-greeting').textContent = 
+                        `${greeting} ${userData.fullName || 'Foydalanuvchi'}!`;
+                    
+                    // A'zo bo'lgan sana
                     if (userData.createdAt) {
                         const date = userData.createdAt.toDate();
                         document.getElementById('member-since-display').textContent = 
-                            `📅 A'zo bo'lgan: ${date.toLocaleDateString('uz-UZ')}`;
+                            `📅 A'zo bo'lgan: ${date.toLocaleDateString('uz-UZ', { 
+                                year: 'numeric', 
+                                month: 'long', 
+                                day: 'numeric' 
+                            })}`;
                     }
                     
-                    // Kurslar soni
-                    const courses = userData.courses || [];
-                    document.getElementById('total-courses').textContent = courses.length;
-                    
-                    // Kurslarni yuklash
-                    loadMyCourses(courses);
+                    // Streak (ketma-ket kunlar)
+                    if (userData.lastLogin) {
+                        const lastLogin = userData.lastLogin.toDate();
+                        const today = new Date();
+                        const diffDays = Math.floor((today - lastLogin) / (1000 * 60 * 60 * 24));
+                        
+                        if (diffDays <= 1) {
+                            const streak = (userData.streak || 0) + 1;
+                            document.getElementById('streak-days').textContent = streak;
+                            
+                            // Streakni yangilash
+                            await db.collection('users').doc(currentUser.uid).update({
+                                streak: streak,
+                                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        } else if (diffDays > 1) {
+                            // Streak uzilgan
+                            document.getElementById('streak-days').textContent = '1';
+                            await db.collection('users').doc(currentUser.uid).update({
+                                streak: 1,
+                                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
+                    }
+                } else {
+                    document.getElementById('user-greeting').textContent = 
+                        `👋 Xush kelibsiz, ${currentUser.email}!`;
                 }
-                
-                // Realtime Database'dan progress ma'lumotlari
-                loadProgressData();
-                
-                // Oxirgi videolarni yuklash
-                loadRecentVideos();
-                
-                // Chatni yuklash
-                loadChat();
-                
             } catch (error) {
-                console.error('Dashboard yuklashda xatolik:', error);
+                console.error('Foydalanuvchi ma\'lumotlarini yuklashda xatolik:', error);
+                document.getElementById('user-greeting').textContent = 
+                    `👋 Xush kelibsiz!`;
             }
         }
         
-        // Progress ma'lumotlarini yuklash (Realtime DB)
-        function loadProgressData() {
-            rtdb.ref(`users/${currentUser.uid}/progress`).on('value', (snapshot) => {
+        // Kun vaqtiga qarab salomlashish
+        function getGreeting() {
+            const hour = new Date().getHours();
+            if (hour < 6) return '🌙 Xayrli tun';
+            if (hour < 12) return '🌅 Xayrli tong';
+            if (hour < 18) return '☀️ Xayrli kun';
+            return '🌆 Xayrli kech';
+        }
+        
+        // Kurslarni yuklash
+        async function loadMyCourses() {
+            const container = document.getElementById('my-courses');
+            
+            try {
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                
+                if (!userDoc.exists) {
+                    showEmptyCourses(container);
+                    return;
+                }
+                
+                const userData = userDoc.data();
+                const courseIds = userData.courses || [];
+                
+                // Realtime Database'dan ham tekshirish
+                const rtdbCourses = await rtdb.ref(`users/${currentUser.uid}/courses`).once('value');
+                const rtdbCourseData = rtdbCourses.val() || {};
+                const allCourseIds = [...new Set([...courseIds, ...Object.keys(rtdbCourseData)])];
+                
+                if (allCourseIds.length === 0) {
+                    showEmptyCourses(container);
+                    return;
+                }
+                
+                // Jami kurslar sonini yangilash
+                document.getElementById('total-courses').textContent = allCourseIds.length;
+                
+                container.innerHTML = '';
+                
+                // Har bir kurs uchun ma'lumotlarni yuklash
+                for (const courseId of allCourseIds) {
+                    await loadCourseCard(container, courseId);
+                }
+                
+            } catch (error) {
+                console.error('Kurslarni yuklashda xatolik:', error);
+                showEmptyCourses(container);
+            }
+        }
+        
+        // Bitta kurs kartochkasini yuklash
+        async function loadCourseCard(container, courseId) {
+            try {
+                let courseInfo = null;
+                
+                // 1. Firestore'dan videolarni izlash
+                const videosSnapshot = await db.collection('videos')
+                    .where('courseId', '==', courseId)
+                    .limit(1)
+                    .get();
+                
+                if (!videosSnapshot.empty) {
+                    const firstVideo = videosSnapshot.docs[0].data();
+                    courseInfo = {
+                        id: courseId,
+                        title: firstVideo.courseTitle || 'Kurs',
+                        icon: firstVideo.courseIcon || '📚',
+                        description: firstVideo.courseDescription || '',
+                        lessonsCount: videosSnapshot.size
+                    };
+                } else {
+                    // 2. Default kurslardan izlash
+                    courseInfo = defaultCourses.find(c => c.id === courseId);
+                }
+                
+                // 3. Realtime Database'dan ma'lumot
+                if (!courseInfo) {
+                    const rtdbCourse = await rtdb.ref(`users/${currentUser.uid}/courses/${courseId}`).once('value');
+                    const rtdbData = rtdbCourse.val();
+                    if (rtdbData) {
+                        courseInfo = {
+                            id: courseId,
+                            title: rtdbData.title || 'Kurs',
+                            icon: '📚',
+                            description: '',
+                            lessonsCount: rtdbData.totalLessons || 0
+                        };
+                    }
+                }
+                
+                if (!courseInfo) return;
+                
+                // Progress hisoblash
+                const { completedLessons, totalLessons, progressPercent } = 
+                    await calculateProgress(courseId, courseInfo.lessonsCount || 0);
+                
+                // Kartochka yaratish
+                container.innerHTML += `
+                    <div class="course-progress-card">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2.5rem;">${courseInfo.icon || '📚'}</div>
+                            <h4>${courseInfo.title}</h4>
+                            ${courseInfo.level ? `<span class="badge badge-info">${courseInfo.level}</span>` : ''}
+                        </div>
+                        
+                        <div class="mt-1">
+                            <small>📚 ${totalLessons} ta dars</small>
+                            ${courseInfo.description ? `<p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">${courseInfo.description}</p>` : ''}
+                        </div>
+                        
+                        <div class="progress mt-1">
+                            <div class="progress-bar" style="width: ${progressPercent}%"></div>
+                        </div>
+                        
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+                            <small>${progressPercent}% yakunlangan</small>
+                            <small>${completedLessons}/${totalLessons}</small>
+                        </div>
+                        
+                        <div class="mt-1">
+                            ${progressPercent === 100 ? 
+                                `<span class="badge badge-success" style="display: block; text-align: center;">✅ Yakunlangan</span>` :
+                                `<button class="btn btn-primary" style="width: 100%;" 
+                                        onclick="continueCourse('${courseId}')">
+                                    ${progressPercent > 0 ? '▶️ Davom ettirish' : '🎓 Boshlash'}
+                                </button>`
+                            }
+                        </div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error(`${courseId} kursini yuklashda xatolik:`, error);
+            }
+        }
+        
+        // Progress hisoblash
+        async function calculateProgress(courseId, defaultTotal) {
+            let completedLessons = 0;
+            let totalLessons = defaultTotal || 0;
+            
+            try {
+                // Realtime Database'dan progress
+                const progressSnapshot = await rtdb.ref(
+                    `users/${currentUser.uid}/progress/${courseId}`
+                ).once('value');
+                const progress = progressSnapshot.val();
+                
+                if (progress) {
+                    if (progress.completedLessons) {
+                        completedLessons = progress.completedLessons;
+                    }
+                    if (progress.totalLessons && progress.totalLessons > totalLessons) {
+                        totalLessons = progress.totalLessons;
+                    }
+                }
+                
+                // Firestore'dan yakunlangan darsliklar
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    const completedData = userData.completedLessons;
+                    
+                    if (completedData && completedData[courseId]) {
+                        const completedCount = completedData[courseId].length;
+                        if (completedCount > completedLessons) {
+                            completedLessons = completedCount;
+                        }
+                    }
+                }
+                
+                // Agar Firestore'da videolar soni ko'proq bo'lsa
+                if (totalLessons === 0) {
+                    const videosCount = await db.collection('videos')
+                        .where('courseId', '==', courseId)
+                        .get()
+                        .then(snap => snap.size);
+                    
+                    if (videosCount > 0) totalLessons = videosCount;
+                }
+                
+                if (totalLessons === 0) totalLessons = 1; // Nolga bo'linmaslik uchun
+                
+            } catch (error) {
+                console.error('Progress hisoblashda xatolik:', error);
+                if (totalLessons === 0) totalLessons = 1;
+            }
+            
+            const progressPercent = Math.round((completedLessons / totalLessons) * 100);
+            
+            return { completedLessons, totalLessons, progressPercent };
+        }
+        
+        // Bo'sh kurslar holati
+        function showEmptyCourses(container) {
+            document.getElementById('total-courses').textContent = '0';
+            container.innerHTML = `
+                <div class="card empty-state">
+                    <div class="empty-state-icon">📚</div>
+                    <h3>Hali hech qanday kursga yozilmagansiz</h3>
+                    <p style="margin: 1rem 0;">Bepul kurslarimizni ko'ring va o'rganishni boshlang!</p>
+                    <a href="courses.html" class="btn btn-primary">🎓 Kurslarni Ko'rish</a>
+                </div>
+            `;
+        }
+        
+        // Statistikani yuklash
+        async function loadStatistics() {
+            try {
                 let totalCompleted = 0;
                 let totalLessons = 0;
                 
-                snapshot.forEach((child) => {
+                // Realtime Database'dan progress
+                const progressSnapshot = await rtdb.ref(`users/${currentUser.uid}/progress`).once('value');
+                
+                progressSnapshot.forEach((child) => {
                     const progress = child.val();
-                    totalCompleted += progress.completed || 0;
-                    totalLessons += progress.total || 0;
+                    if (progress.completedLessons) {
+                        totalCompleted += progress.completedLessons;
+                    }
+                    if (progress.totalLessons) {
+                        totalLessons += progress.totalLessons;
+                    }
                 });
+                
+                // Firestore'dan ham
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    const completedData = userData.completedLessons || {};
+                    
+                    Object.values(completedData).forEach(completedArray => {
+                        totalCompleted += completedArray.length;
+                    });
+                }
                 
                 document.getElementById('completed-lessons').textContent = totalCompleted;
                 
                 // Taxminiy soatlar (har bir dars ~30 daqiqa)
                 const hours = Math.round((totalCompleted * 0.5) * 10) / 10;
                 document.getElementById('total-hours').textContent = hours;
-            });
-        }
-        
-        // Kurslarni yuklash
-        async function loadMyCourses(courseIds) {
-            const container = document.getElementById('my-courses');
-            
-            if (!courseIds || courseIds.length === 0) {
-                container.innerHTML = `
-                    <div class="card text-center" style="grid-column: 1 / -1;">
-                        <div style="font-size: 3rem;">📚</div>
-                        <p>Hali hech qanday kursga yozilmagansiz</p>
-                        <a href="courses.html" class="btn btn-primary mt-1">Kurslarni Ko'rish</a>
-                    </div>
-                `;
-                return;
-            }
-            
-            container.innerHTML = '';
-            
-            for (const courseId of courseIds) {
-                try {
-                    const courseDoc = await db.collection('courses').doc(courseId).get();
-                    if (courseDoc.exists) {
-                        const course = courseDoc.data();
-                        
-                        // Progress ma'lumotlari
-                        let progressPercent = 0;
-                        try {
-                            const progressSnapshot = await rtdb.ref(
-                                `users/${currentUser.uid}/progress/${courseId}`
-                            ).once('value');
-                            const progress = progressSnapshot.val();
-                            if (progress && progress.total > 0) {
-                                progressPercent = Math.round((progress.completed / progress.total) * 100);
-                            }
-                        } catch (e) {}
-                        
-                        container.innerHTML += `
-                            <div class="course-progress-card">
-                                <h4>${course.title || 'Kurs'}</h4>
-                                <p>${course.description || ''}</p>
-                                <div class="progress mt-1">
-                                    <div class="progress-bar" style="width: ${progressPercent}%"></div>
-                                </div>
-                                <small>${progressPercent}% yakunlangan</small>
-                                <div class="mt-1">
-                                    <a href="courses.html" class="btn btn-primary" style="width: 100%;">
-                                        Davom ettirish
-                                    </a>
-                                </div>
-                            </div>
-                        `;
-                    }
-                } catch (error) {
-                    console.error('Kurs yuklashda xatolik:', error);
-                }
+                
+            } catch (error) {
+                console.error('Statistikani yuklashda xatolik:', error);
             }
         }
         
-        // Oxirgi videolarni yuklash
-        async function loadRecentVideos() {
-            const container = document.getElementById('recent-videos');
+        // Oxirgi ko'rilgan darsliklar
+        async function loadRecentLessons() {
+            const container = document.getElementById('recent-lessons');
             
             try {
-                const videos = await dbManager.getVideos();
-                const recentVideos = videos.slice(0, 6); // Oxirgi 6 ta video
+                // Realtime Database'dan oxirgi progress
+                const progressSnapshot = await rtdb.ref(`users/${currentUser.uid}/progress`).once('value');
+                const allProgress = [];
                 
-                if (recentVideos.length === 0) {
-                    container.innerHTML = '<p class="text-center">Hozircha videolar yo\'q</p>';
+                progressSnapshot.forEach((child) => {
+                    const courseId = child.key;
+                    const progress = child.val();
+                    if (progress.lastAccessed && progress.currentVideoId) {
+                        allProgress.push({
+                            courseId,
+                            videoId: progress.currentVideoId,
+                            lastAccessed: progress.lastAccessed
+                        });
+                    }
+                });
+                
+                // Vaqt bo'yicha saralash
+                allProgress.sort((a, b) => b.lastAccessed - a.lastAccessed);
+                
+                if (allProgress.length === 0) {
+                    container.innerHTML = `
+                        <div class="card text-center">
+                            <p style="color: var(--text-secondary);">Hozircha ko'rilgan darsliklar yo'q</p>
+                        </div>
+                    `;
                     return;
                 }
                 
-                container.innerHTML = recentVideos.map(video => `
-                    <div class="card">
-                        <div style="font-size: 2rem;">🎥</div>
-                        <h4>${video.title}</h4>
-                        <p>${video.description || ''}</p>
-                        <small>👁️ ${video.views || 0} ko'rishlar</small>
-                        <div class="mt-1">
-                            <a href="${video.url}" target="_blank" class="btn btn-outline" style="width: 100%;">
-                                ▶️ Ko'rish
-                            </a>
-                        </div>
+                container.innerHTML = '';
+                
+                // Oxirgi 3 ta
+                for (const item of allProgress.slice(0, 3)) {
+                    try {
+                        const videoDoc = await db.collection('videos').doc(item.videoId).get();
+                        if (videoDoc.exists) {
+                            const video = videoDoc.data();
+                            const date = new Date(item.lastAccessed);
+                            
+                            container.innerHTML += `
+                                <div class="card mb-1" style="cursor: pointer;" 
+                                     onclick="continueCourse('${item.courseId}')">
+                                    <div style="display: flex; align-items: center; gap: 1rem;">
+                                        <div style="font-size: 2rem;">🎥</div>
+                                        <div style="flex: 1;">
+                                            <strong>${video.title || 'Darslik'}</strong>
+                                            <p style="font-size: 0.85rem; color: var(--text-secondary);">
+                                                ${video.courseTitle || ''}
+                                            </p>
+                                            <small>📅 ${date.toLocaleDateString('uz-UZ')} | ⏰ ${date.toLocaleTimeString('uz-UZ')}</small>
+                                        </div>
+                                        <button class="btn btn-outline" style="padding: 0.5rem 0.8rem;">
+                                            ▶️
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    } catch (error) {
+                        console.error('Darslik yuklashda xatolik:', error);
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Oxirgi darsliklarni yuklashda xatolik:', error);
+                container.innerHTML = '<p style="color: var(--text-secondary);">Yuklashda xatolik</p>';
+            }
+        }
+        
+        // Yangiliklar widget'i
+        async function loadNewsWidget() {
+            const container = document.getElementById('news-widget');
+            
+            try {
+                const news = await dbManager.getNews(3);
+                
+                if (news.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-secondary);">Hozircha yangiliklar yo\'q</p>';
+                    return;
+                }
+                
+                container.innerHTML = news.map(item => `
+                    <div class="mb-1" style="padding: 0.5rem; border-bottom: 1px solid var(--border-color);">
+                        <strong>${item.title}</strong>
+                        <p style="font-size: 0.85rem; color: var(--text-secondary);">${item.content.substring(0, 80)}...</p>
+                        <small>${item.createdAt ? new Date(item.createdAt.toDate()).toLocaleDateString('uz-UZ') : ''}</small>
                     </div>
                 `).join('');
                 
             } catch (error) {
-                console.error('Videolarni yuklashda xatolik:', error);
-                container.innerHTML = '<p class="text-center">Videolarni yuklashda xatolik</p>';
+                console.error('Yangiliklarni yuklashda xatolik:', error);
+                container.innerHTML = '<p style="color: var(--text-secondary);">Yuklashda xatolik</p>';
             }
         }
         
@@ -312,13 +697,17 @@
             const chatMessages = document.getElementById('chat-messages');
             
             dbManager.onGlobalMessages((messages) => {
+                if (messages.length === 0) {
+                    chatMessages.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">Hozircha xabarlar yo\'q. Birinchi bo\'lib yozing!</p>';
+                    return;
+                }
+                
                 chatMessages.innerHTML = messages.map(msg => `
                     <div class="chat-message">
-                        <span class="username">${msg.username || 'Anonim'}:</span>
+                        <span class="username">${msg.username || 'Anonim'}</span>
+                        <span class="time">${msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        <br>
                         <span>${msg.text}</span>
-                        <small style="float: right; color: var(--text-secondary);">
-                            ${new Date(msg.timestamp).toLocaleTimeString('uz-UZ')}
-                        </small>
                     </div>
                 `).join('');
                 
@@ -336,19 +725,81 @@
             
             try {
                 const userDoc = await db.collection('users').doc(currentUser.uid).get();
-                const username = userDoc.exists ? userDoc.data().fullName : currentUser.email;
+                const username = userDoc.exists ? userDoc.data().fullName : currentUser.email.split('@')[0];
                 
                 await dbManager.sendGlobalMessage(currentUser.uid, username, text);
                 input.value = '';
+                input.focus();
             } catch (error) {
                 console.error('Xabar yuborishda xatolik:', error);
-                alert('Xabar yuborilmadi. Iltimos qayta urinib ko\'ring.');
+                alert('❌ Xabar yuborilmadi. Iltimos qayta urinib ko\'ring.');
             }
         }
         
-        // Enter tugmasi bilan xabar yuborish
+        // Kursni davom ettirish
+        async function continueCourse(courseId) {
+            try {
+                // Kurs ma'lumotlarini yig'ish
+                let courseData = null;
+                
+                // Firestore'dan videolarni izlash
+                const videosSnapshot = await db.collection('videos')
+                    .where('courseId', '==', courseId)
+                    .get();
+                
+                if (!videosSnapshot.empty) {
+                    const firstVideo = videosSnapshot.docs[0].data();
+                    courseData = {
+                        id: courseId,
+                        title: firstVideo.courseTitle || 'Kurs',
+                        icon: firstVideo.courseIcon || '📚',
+                        description: firstVideo.courseDescription || '',
+                        lessonsCount: videosSnapshot.size,
+                        category: firstVideo.categoryId || '',
+                        level: firstVideo.level || 'Boshlang\'ich'
+                    };
+                } else {
+                    // Default kurslardan izlash
+                    courseData = defaultCourses.find(c => c.id === courseId);
+                }
+                
+                // Realtime Database'dan
+                if (!courseData) {
+                    const rtdbCourse = await rtdb.ref(`users/${currentUser.uid}/courses/${courseId}`).once('value');
+                    const rtdbData = rtdbCourse.val();
+                    if (rtdbData) {
+                        courseData = {
+                            id: courseId,
+                            title: rtdbData.title || 'Kurs',
+                            icon: '📚',
+                            description: '',
+                            lessonsCount: rtdbData.totalLessons || 0
+                        };
+                    }
+                }
+                
+                if (courseData) {
+                    // Video player'ni ochish
+                    if (typeof videoPlayer !== 'undefined') {
+                        videoPlayer.openCourse(courseId, courseData);
+                    } else {
+                        // Agar video player yuklanmagan bo'lsa
+                        window.location.href = `courses.html?course=${courseId}`;
+                    }
+                } else {
+                    alert('Kurs ma\'lumotlari topilmadi');
+                }
+                
+            } catch (error) {
+                console.error('Kursni davom ettirishda xatolik:', error);
+                alert('❌ Xatolik yuz berdi. Iltimos qayta urinib ko\'ring.');
+            }
+        }
+        
+        // Enter tugmasi bilan chat xabarini yuborish
         document.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && document.activeElement === document.getElementById('chat-input')) {
+                e.preventDefault();
                 sendChatMessage();
             }
         });
@@ -357,8 +808,10 @@
         document.getElementById('logout-btn').addEventListener('click', async (e) => {
             e.preventDefault();
             if (confirm('Haqiqatan ham chiqmoqchimisiz?')) {
-                await logoutUser();
-                window.location.href = 'index.html';
+                const result = await logoutUser();
+                if (result.success) {
+                    window.location.href = 'index.html';
+                }
             }
         });
         
@@ -372,6 +825,13 @@
                 }
             });
         });
+        
+        // Har 30 soniyada statistikani yangilash
+        setInterval(() => {
+            if (currentUser) {
+                loadStatistics();
+            }
+        }, 30000);
     </script>
 </body>
 </html>
